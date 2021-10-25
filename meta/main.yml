@@ -1,0 +1,37 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: auto_update
+  author: guidugli
+  description: Install and configure packages to auto update linux
+  company: Creuzo Tech
+  license: "license (BSD, MIT)"
+  min_ansible_version: 2.9
+
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 7
+    - name: Fedora
+      versions:
+        - 34
+    - name: Ubuntu
+      versions:
+        - focal
+        - bionic
+    - name: Debian
+      versions:
+        - bullseye
+        - buster
+
+  galaxy_tags:
+    - auto
+    - update
+    - yum
+    - cron
+    - dnf
+    - automatic
+    - unattended
+    - upgrades

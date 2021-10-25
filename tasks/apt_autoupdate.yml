@@ -1,0 +1,42 @@
+---
+
+# Run this first part only if auto update is not enabled
+- name: Check if package is already installed
+  block:
+    - name: Gather the package facts
+      package_facts:
+        manager: auto
+
+    - name: Create variable to indicate if package is installed
+      set_fact:
+        au_auto_udpate_pkg_installed: "{{ 'unattended-upgrades' in ansible_facts.packages }}"
+  when: not au_enable_auto_update
+
+- name: Install required package unattended-upgrades
+  apt:
+    name: unattended-upgrades
+    state: present
+    update_cache: yes
+  when: au_enable_auto_update
+
+- name: "{{ text }} unattended-upgrades service"
+  vars:
+    text: "{{ 'Enable' if au_enable_auto_update else 'Disable' }}"
+    newstate: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
+  systemd:
+    name: unattended-upgrades.service
+    state: "{{ newstate }}"
+    enabled: "{{ au_enable_auto_update }}"
+  when: au_enable_auto_update or au_auto_udpate_pkg_installed
+
+- name: Configure /etc/apt/apt.conf.d/ files
+  template:
+    src: "{{ item }}"
+    dest: "/etc/apt/apt.conf.d/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+    force: yes
+  loop:
+    - 20auto-upgrades
+    - 50unattended-upgrades

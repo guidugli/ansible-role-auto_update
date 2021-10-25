@@ -1,0 +1,47 @@
+---
+
+- name: Check if boolean variables are valid
+  assert:
+    that:
+      - lookup('vars', item) | type_debug == 'bool'
+    quiet: yes
+  when: vars[item] is defined
+  loop:
+    - au_enable_auto_update
+    - au_security_only
+    - au_download_only
+    - au_remove_old_kernel
+    - au_remove_new_unused_dependencies
+    - au_remove_unused_dependencies
+    - au_automatic_reboot
+    - au_reboot_with_users
+    - au_syslog_enable
+
+- name: Check string variables are valid
+  vars:
+    litem: "{{ lookup('vars', item) }}"
+  assert:
+    that:
+      - litem is string
+      - litem | length > 0
+    quiet: yes
+  when: vars[item] is defined
+  loop:
+    - au_email_from
+    - au_email_to
+    - au_emit_via
+    - au_command_format
+    - au_stdin_format
+    - au_email_server
+    - au_mail_report
+    - au_reboot_time
+    - au_syslog_facility
+
+- name: Check string variables values
+  assert:
+    that:
+      - (au_emit_via is undefined) or au_emit_via in ['stdio', 'email', 'motd']
+      - (au_mail_report is undefined) or au_mail_report in ['always', 'only-on-error', 'on-change']
+      - (au_reboot_time is undefined) or au_reboot_time is regex('(now|\d\d\:\d\d)')
+      - au_system_name is undefined or (au_system_name is string and au_system_name | length > 0)
+    quiet: yes

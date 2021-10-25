@@ -1,0 +1,10 @@
+---
+# tasks file for auto_update
+
+- name: Check package system variables
+  import_tasks: assert.yml
+
+# RedHat and Debian system are too different in regards of
+# package management, so keep a task file for each
+- name: Perform system auto update configuration
+  include_tasks: "{{ ansible_pkg_mgr }}_autoupdate.yml"

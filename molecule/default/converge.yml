@@ -1,0 +1,47 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    au_enable_auto_update: yes
+    au_security_only: yes
+    au_email_from: root
+    au_email_to: admin@someorg.local
+    au_download_only: no
+    au_emit_via: stdio
+    au_command_format: "mail -s {subject} -r {email_from} {email_to}"
+    au_stdin_format: "{body}"
+    au_email_server: localhost
+    au_system_name: mysystem
+    au_mail_report: only-on-error
+    au_remove_old_kernel: yes
+    au_remove_new_unused_dependencies: yes
+    au_remove_unused_dependencies: no
+    au_automatic_reboot: no
+    au_reboot_with_users: yes
+    au_reboot_time: '02:00'
+    au_syslog_enable: no
+    au_syslog_facility: daemon
+  pre_tasks:
+#    - name: update RedHat systems running yum
+#      yum:
+#        name: "*"
+#        state: latest
+#      when: ansible_pkg_mgr in ['yum', 'dnf']
+
+    - name: update Ubuntu/Debian systems
+      apt:
+#        upgrade: dist
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_pkg_mgr == "apt"
+
+#    - name: Make sure some packages are installed
+#      ansible.builtin.package:
+#        name:
+#          - sudo
+#          - vim
+#          - curl
+#        state: latest
+
+  roles:
+    - role: guidugli.auto_update

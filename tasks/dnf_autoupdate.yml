@@ -1,0 +1,40 @@
+---
+
+# Run this first part only if auto update is not enabled
+- name: Check if package is already installed
+  block:
+    - name: Gather the package facts
+      package_facts:
+        manager: rpm
+
+    - name: Create variable to indicate if package is installed
+      set_fact:
+        au_pkg_installed: "{{ 'dnf-automatic' in ansible_facts.packages }}"
+  when: not au_enable_auto_update
+
+- name: Install required package dnf-automatic
+  dnf:
+    name: dnf-automatic
+    state: present
+  when: au_enable_auto_update
+
+# This task will only run if auto enabled is enabled or if package already exists
+- name: "{{ text }} dnf-automatic service"
+  vars:
+    text: "{{ 'Enable' if au_enable_auto_update else 'Disable' }}"
+    newstate: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
+  systemd:
+    name: dnf-automatic.timer
+    state: "{{ newstate }}"
+    enabled: "{{ au_enable_auto_update }}"
+  when: au_enable_auto_update or au_pkg_installed
+
+- name: Configure /etc/dnf/automatic.conf
+  template:
+    src: automatic.conf
+    dest: /etc/dnf/automatic.conf
+    owner: root
+    group: root
+    mode: '0644'
+    force: yes
+  when: au_enable_auto_update

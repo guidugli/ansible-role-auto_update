@@ -1,0 +1,77 @@
+---
+# defaults file for auto_update
+
+# Configure system to automatically update packages regularly
+# If set to no, the role will disable the service (if installed)
+# or do nothing (if not already installed).
+au_enable_auto_update: yes
+
+## OPTIONAL VARIABLES ##
+
+# If set to yes, only install security updates
+au_security_only: yes
+
+# Origin email
+au_email_from: root
+
+# Who should receive the email
+#au_email_to: admin@someorg.local
+
+## REDHAT ##
+
+# If set to yes, the updates will be downloaded but not installed
+# If set to no, updates will be downloaded and installed
+au_download_only: no
+
+# How to send messages.  Valid options are stdio, email and motd.
+#au_emit_via: stdio
+
+# The shell command to use to send email. This is a Python format string,
+# as used in str.format(). The format function will pass shell-quoted arguments
+# called body, subject, email_from, email_to.
+#au_command_format: "mail -s {subject} -r {email_from} {email_to}"
+
+# The contents of stdin to pass to the command. It is a format string with the
+# same arguments as `command_format`.
+#au_stdin_format: "{body}"
+
+# Email server hostname or ip
+#au_email_server: localhost
+
+# Name to use for this system in messages that are emitted.  Default is the
+# hostname.
+#au_system_name: mysystem
+
+## UBUNTU ##
+
+# Set this value to one of: "always", "only-on-error" or "on-change"
+#au_mail_report: only-on-error
+
+# Remove unused automatically installed kernel-related packages
+# (kernel images, kernel headers and kernel version locked tools).
+#au_remove_old_kernel: yes
+
+# Do automatic removal of newly unused dependencies after the upgrade
+au_remove_new_unused_dependencies: yes
+
+# Do automatic removal of unused packages after the upgrade
+# (equivalent to apt-get autoremove)
+au_remove_unused_dependencies: no
+
+# Automatically reboot *WITHOUT CONFIRMATION* if
+# the file /var/run/reboot-required is found after the upgrade
+#au_automatic_reboot: no
+
+# Automatically reboot even if there are users currently logged in
+# when Unattended-Upgrade::Automatic-Reboot is set to true
+#au_reboot_with_users: yes
+
+# If automatic reboot is enabled and needed, reboot at the specific
+# time instead of immediately. Default is "now".
+#au_reboot_time: '02:00'
+
+# Enable logging to syslog. Default is False
+#au_syslog_enable: no
+
+# Specify syslog facility. Default is daemon
+#au_syslog_facility: daemon
