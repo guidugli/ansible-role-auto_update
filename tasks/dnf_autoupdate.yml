@@ -4,16 +4,16 @@
 - name: Check if package is already installed
   block:
     - name: Gather the package facts
-      package_facts:
+      ansible.builtin.package_facts:
         manager: rpm
 
     - name: Create variable to indicate if package is installed
-      set_fact:
+      ansible.builtin.set_fact:
         au_pkg_installed: "{{ 'dnf-automatic' in ansible_facts.packages }}"
   when: not au_enable_auto_update
 
 - name: Install required package dnf-automatic
-  dnf:
+  ansible.builtin.dnf:
     name: dnf-automatic
     state: present
   when: au_enable_auto_update
@@ -23,14 +23,14 @@
   vars:
     text: "{{ 'Enable' if au_enable_auto_update else 'Disable' }}"
     newstate: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
-  systemd:
+  ansible.builtin.systemd:
     name: dnf-automatic.timer
     state: "{{ newstate }}"
     enabled: "{{ au_enable_auto_update }}"
   when: au_enable_auto_update or au_pkg_installed
 
 - name: Configure /etc/dnf/automatic.conf
-  template:
+  ansible.builtin.template:
     src: automatic.conf
     dest: /etc/dnf/automatic.conf
     owner: root

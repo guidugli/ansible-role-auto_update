@@ -29,7 +29,7 @@
 #      when: ansible_pkg_mgr in ['yum', 'dnf']
 
     - name: update Ubuntu/Debian systems
-      apt:
+      ansible.builtin.apt:
 #        upgrade: dist
         update_cache: true
         cache_valid_time: 3600

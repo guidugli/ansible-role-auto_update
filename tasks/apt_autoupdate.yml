@@ -4,16 +4,16 @@
 - name: Check if package is already installed
   block:
     - name: Gather the package facts
-      package_facts:
+      ansible.builtin.package_facts:
         manager: auto
 
     - name: Create variable to indicate if package is installed
-      set_fact:
+      ansible.builtin.set_fact:
         au_auto_udpate_pkg_installed: "{{ 'unattended-upgrades' in ansible_facts.packages }}"
   when: not au_enable_auto_update
 
 - name: Install required package unattended-upgrades
-  apt:
+  ansible.builtin.apt:
     name: unattended-upgrades
     state: present
     update_cache: yes
@@ -23,14 +23,14 @@
   vars:
     text: "{{ 'Enable' if au_enable_auto_update else 'Disable' }}"
     newstate: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
-  systemd:
+  ansible.builtin.systemd:
     name: unattended-upgrades.service
     state: "{{ newstate }}"
     enabled: "{{ au_enable_auto_update }}"
   when: au_enable_auto_update or au_auto_udpate_pkg_installed
 
 - name: Configure /etc/apt/apt.conf.d/ files
-  template:
+  ansible.builtin.template:
     src: "{{ item }}"
     dest: "/etc/apt/apt.conf.d/{{ item }}"
     owner: root

@@ -4,16 +4,16 @@
 - name: Check if package is already installed
   block:
     - name: Gather the package facts
-      package_facts:
+      ansible.builtin.package_facts:
         manager: rpm
 
     - name: Create variable to indicate if package is installed
-      set_fact:
+      ansible.builtin.set_fact:
         au_auto_udpate_pkg_installed: "{{ 'yum-cron' in ansible_facts.packages }}"
   when: not au_enable_auto_update
 
 - name: Install required package yum-cron
-  yum:
+  ansible.builtin.yum:
     name: yum-cron
     state: present
   when: au_enable_auto_update
@@ -23,7 +23,7 @@
   vars:
     text: "{{ 'Enable' if au_enable_auto_update else 'Disable' }}"
     newstate: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
-  systemd:
+  ansible.builtin.systemd:
     name: yum-cron.service
     state: "{{ newstate }}"
     enabled: "{{ au_enable_auto_update }}"

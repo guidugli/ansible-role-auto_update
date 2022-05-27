@@ -1,7 +1,7 @@
 ---
 
 - name: Check if boolean variables are valid
-  assert:
+  ansible.builtin.assert:
     that:
       - lookup('vars', item) | type_debug == 'bool'
     quiet: yes
@@ -20,7 +20,7 @@
 - name: Check string variables are valid
   vars:
     litem: "{{ lookup('vars', item) }}"
-  assert:
+  ansible.builtin.assert:
     that:
       - litem is string
       - litem | length > 0
@@ -38,7 +38,7 @@
     - au_syslog_facility
 
 - name: Check string variables values
-  assert:
+  ansible.builtin.assert:
     that:
       - (au_emit_via is undefined) or au_emit_via in ['stdio', 'email', 'motd']
       - (au_mail_report is undefined) or au_mail_report in ['always', 'only-on-error', 'on-change']
