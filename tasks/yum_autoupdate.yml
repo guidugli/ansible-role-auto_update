@@ -44,5 +44,5 @@
     - { section: email, key: email_from, value: "{{ au_email_from }}" }
     - { section: email, key: email_to, value: "{{ au_email_to }}" }
     - { section: email, key: email_host, value: "{{ au_email_server }}" }
-  notify: restart yum-cron service
+  notify: Restart yum-cron service
   when: au_enable_auto_update

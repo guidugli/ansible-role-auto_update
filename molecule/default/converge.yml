@@ -28,7 +28,7 @@
 #        state: latest
 #      when: ansible_pkg_mgr in ['yum', 'dnf']
 
-    - name: update Ubuntu/Debian systems
+    - name: Update Ubuntu/Debian systems
       ansible.builtin.apt:
 #        upgrade: dist
         update_cache: true
