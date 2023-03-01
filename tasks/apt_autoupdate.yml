@@ -2,6 +2,7 @@
 
 # Run this first part only if auto update is not enabled
 - name: Check if package is already installed
+  when: not au_enable_auto_update
   block:
     - name: Gather the package facts
       ansible.builtin.package_facts:
@@ -10,7 +11,6 @@
     - name: Create variable to indicate if package is installed
       ansible.builtin.set_fact:
         au_auto_udpate_pkg_installed: "{{ 'unattended-upgrades' in ansible_facts.packages }}"
-  when: not au_enable_auto_update
 
 - name: Install required package unattended-upgrades
   ansible.builtin.apt:

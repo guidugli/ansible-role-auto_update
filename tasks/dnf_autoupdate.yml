@@ -2,6 +2,7 @@
 
 # Run this first part only if auto update is not enabled
 - name: Check if package is already installed
+  when: not au_enable_auto_update
   block:
     - name: Gather the package facts
       ansible.builtin.package_facts:
@@ -10,7 +11,6 @@
     - name: Create variable to indicate if package is installed
       ansible.builtin.set_fact:
         au_pkg_installed: "{{ 'dnf-automatic' in ansible_facts.packages }}"
-  when: not au_enable_auto_update
 
 - name: Install required package dnf-automatic
   ansible.builtin.dnf:
