@@ -51,10 +51,9 @@ jobs:
           - ubuntu1804
           - debian11
           - debian10
-          - fedora34
-          - fedora35
-          - fedora36
+          - fedora38
           - fedora37
+          - fedora36
 
     steps:
       - name: Check out the codebase.
@@ -68,7 +67,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install test dependencies.
-        run: pip3 install ansible molecule[docker] docker ansible-lint[yamllint]
+        run: pip3 install ansible molecule molecule-plugins[docker] docker ansible-lint[yamllint]
 
       - name: Run Molecule tests.
         run: molecule test
