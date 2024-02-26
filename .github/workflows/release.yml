@@ -11,23 +11,23 @@ name: Release
     tags:
       - '*'
 
-defaults:
-  run:
-    working-directory: 'guidugli.auto_update'
-
 jobs:
 
   release:
     name: Release
     runs-on: ubuntu-20.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ vars.WORKING_DIR }}
     steps:
       - name: Check out the codebase.
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          path: 'guidugli.auto_update'
+          path: ${{ vars.WORKING_DIR }}
 
       - name: Set up Python 3.
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 

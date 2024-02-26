@@ -1,0 +1,10 @@
+APT::Periodic::Update-Package-Lists "1";
+{% if au_enable_auto_update is defined and au_enable_auto_update %}
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
+{% else %}
+APT::Periodic::Unattended-Upgrade "0";
+APT::Periodic::Download-Upgradeable-Packages "0";
+//APT::Periodic::AutocleanInterval "7";
+{% endif %}

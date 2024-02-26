@@ -44,4 +44,5 @@
       - (au_mail_report is undefined) or au_mail_report in ['always', 'only-on-error', 'on-change']
       - (au_reboot_time is undefined) or au_reboot_time is regex('(now|\d\d\:\d\d)')
       - au_system_name is undefined or (au_system_name is string and au_system_name | length > 0)
+      - (au_redhat_reboot is undefined) or (au_redhat_reboot in ['never', 'when-changed', 'when-needed'])
     quiet: yes

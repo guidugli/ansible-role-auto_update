@@ -42,6 +42,12 @@ au_download_only: no
 # hostname.
 #au_system_name: mysystem
 
+# When the system should reboot following upgrades:
+# never                              = don't reboot after upgrades
+# when-changed                       = reboot after any changes
+# when-needed                        = reboot when necessary to apply changes
+#au_redhat_reboot: never
+
 ## UBUNTU ##
 
 # Set this value to one of: "always", "only-on-error" or "on-change"
