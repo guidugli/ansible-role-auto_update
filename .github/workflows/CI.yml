@@ -3,6 +3,7 @@ name: CI
 
 # Controls when the workflow will run
 'on':
+  pull_request:
   push:
     branches: [ main ]
 
@@ -20,8 +21,7 @@ jobs:
       run:
         shell: bash
         working-directory: ${{ vars.WORKING_DIR }}
-    environment: production
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
@@ -38,28 +38,27 @@ jobs:
 
       - name: Lint code.
         run: |
-          yamllint .
+          yamllint -c .yamllint .
+
   molecule:
     name: Molecule
-
     defaults:
       run:
         shell: bash
         working-directory: ${{ vars.WORKING_DIR }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         distro:
-          - rockylinux9
-          - centos8
+          - ubuntu2404
           - ubuntu2204
-          - ubuntu2004
           - debian12
           - debian11
+          - fedora41
           - fedora40
-          - fedora39
 
     steps:
+
       - name: Check out the codebase.
         uses: actions/checkout@v4
         with:
@@ -71,7 +70,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install test dependencies.
-        run: pip3 install ansible molecule molecule-plugins[docker] docker ansible-lint[yamllint] netaddr
+        run: pip3 install ansible molecule molecule-plugins[docker] docker
 
       - name: Run Molecule tests.
         run: molecule test
