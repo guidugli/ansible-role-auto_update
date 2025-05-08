@@ -15,11 +15,11 @@ jobs:
 
   release:
     name: Release
-    runs-on: ubuntu-20.04
     defaults:
       run:
         shell: bash
         working-directory: ${{ vars.WORKING_DIR }}
+    runs-on: ubuntu-latest
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
