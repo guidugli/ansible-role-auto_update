@@ -2,11 +2,13 @@
 # handlers file for auto_update
 
 - name: "Restart dnf-automatic service"
+  become: yes
   ansible.builtin.systemd:
     name: dnf-automatic.timer
     state: restarted
 
 - name: "Restart yum-cron service"
+  become: yes
   ansible.builtin.systemd:
     name: yum-cron.service
     state: restarted
