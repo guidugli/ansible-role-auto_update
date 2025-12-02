@@ -1,10 +1,15 @@
 ---
 # tasks file for auto_update
 
-- name: Check package system variables
-  ansible.builtin.import_tasks: assert.yml
+- name: Execute role
+  block:
 
-# RedHat and Debian system are too different in regards of
-# package management, so keep a task file for each
-- name: Perform system auto update configuration
-  ansible.builtin.include_tasks: "{{ ansible_pkg_mgr }}_autoupdate.yml"
+    - name: Check package system variables
+      ansible.builtin.import_tasks: assert.yml
+    
+    # RedHat and Debian system are too different in regards of
+    # package management, so keep a task file for each
+    - name: Perform system auto update configuration
+      ansible.builtin.include_tasks: "{{ ansible_pkg_mgr }}_autoupdate.yml"
+
+  become: yes
