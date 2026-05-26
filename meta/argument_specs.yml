@@ -9,117 +9,84 @@ argument_specs:
         type: bool
         required: false
         default: true
-        description:
-          - Whether automatic package updates should be enabled.
       au_security_only:
         type: bool
         required: false
         default: true
-        description:
-          - Limit automatic updates to security updates when supported.
       au_email_from:
         type: str
         required: false
         default: root
-        description:
-          - Sender address used in update notification emails.
       au_email_to:
         type: str
         required: false
-        description:
-          - Recipient address used in update notification emails.
       au_download_only:
         type: bool
         required: false
         default: false
-        description:
-          - Download updates without applying them on Red Hat family systems.
       au_emit_via:
         type: str
         required: false
-        choices:
-          - stdio
-          - email
-          - motd
-        description:
-          - Notification channel used by dnf automatic.
+        choices: [stdio, email, motd]
       au_command_format:
         type: str
         required: false
-        description:
-          - Command format string used by command_email emitters.
       au_stdin_format:
         type: str
         required: false
-        description:
-          - Standard input format string used by command_email emitters.
       au_email_server:
         type: str
         required: false
-        description:
-          - SMTP server hostname or IP used by dnf automatic.
       au_system_name:
         type: str
         required: false
-        description:
-          - Friendly system name used in emitted messages.
       au_redhat_reboot:
         type: str
         required: false
-        choices:
-          - never
-          - when-changed
-          - when-needed
-        description:
-          - Reboot policy after package updates on Red Hat family systems.
+        choices: [never, when-changed, when-needed]
+      au_manage_schedule:
+        type: bool
+        required: false
+        default: false
+      au_timer_on_calendar:
+        type: str
+        required: false
+        default: ""
+      au_timer_randomized_delay_sec:
+        type: str
+        required: false
+        default: ""
+      au_timer_persistent:
+        type: bool
+        required: false
+        default: true
       au_mail_report:
         type: str
         required: false
-        choices:
-          - always
-          - only-on-error
-          - on-change
-        description:
-          - Mail reporting policy used by unattended-upgrades.
+        choices: [always, only-on-error, on-change]
       au_remove_old_kernel:
         type: bool
         required: false
-        description:
-          - Remove unused automatically installed kernel-related packages.
       au_remove_new_unused_dependencies:
         type: bool
         required: false
         default: true
-        description:
-          - Remove newly unused dependencies after unattended upgrades.
       au_remove_unused_dependencies:
         type: bool
         required: false
         default: false
-        description:
-          - Remove unused dependencies after unattended upgrades.
       au_automatic_reboot:
         type: bool
         required: false
-        description:
-          - Automatically reboot after unattended upgrades if required.
       au_reboot_with_users:
         type: bool
         required: false
-        description:
-          - Allow automatic reboot even when users are logged in.
       au_reboot_time:
         type: str
         required: false
-        description:
-          - Time for automatic reboot, in HH:MM format or now.
       au_syslog_enable:
         type: bool
         required: false
-        description:
-          - Enable unattended-upgrades logging to syslog.
       au_syslog_facility:
         type: str
         required: false
-        description:
-          - Syslog facility used by unattended-upgrades.

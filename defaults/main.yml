@@ -1,83 +1,91 @@
 ---
 # defaults file for auto_update
-
-# Configure system to automatically update packages regularly
-# If set to no, the role will disable the service (if installed)
+#
+# Configure system to automatically update packages regularly.
+# If set to false, the role will disable the service/timer (if installed)
 # or do nothing (if not already installed).
-au_enable_auto_update: yes
 
-## OPTIONAL VARIABLES ##
+au_enable_auto_update: true
 
-# If set to yes, only install security updates
-au_security_only: yes
+# OPTIONAL VARIABLES
+
+# If set to true, only install security updates where supported.
+au_security_only: true
 
 # Origin email
 au_email_from: root
 
-# Who should receive the email
-#au_email_to: admin@someorg.local
+# Who should receive update emails
+# au_email_to: admin@someorg.local
 
-## REDHAT ##
+# REDHAT / FEDORA
+# If set to true, updates will be downloaded but not installed.
+# If set to false, updates will be downloaded and installed.
+au_download_only: false
 
-# If set to yes, the updates will be downloaded but not installed
-# If set to no, updates will be downloaded and installed
-au_download_only: no
+# How to send messages. Valid options are stdio, email and motd.
+# au_emit_via: stdio
 
-# How to send messages.  Valid options are stdio, email and motd.
-#au_emit_via: stdio
+# The shell command to use to send email. This is a Python format string.
+# au_command_format: "mail -s -r "
 
-# The shell command to use to send email. This is a Python format string,
-# as used in str.format(). The format function will pass shell-quoted arguments
-# called body, subject, email_from, email_to.
-#au_command_format: "mail -s {subject} -r {email_from} {email_to}"
+# The contents of stdin to pass to the command.
+# au_stdin_format: ""
 
-# The contents of stdin to pass to the command. It is a format string with the
-# same arguments as `command_format`.
-#au_stdin_format: "{body}"
+# Email server hostname or IP
+# au_email_server: localhost
 
-# Email server hostname or ip
-#au_email_server: localhost
-
-# Name to use for this system in messages that are emitted.  Default is the
-# hostname.
-#au_system_name: mysystem
+# Name to use for this system in messages that are emitted. Default is the hostname.
+# au_system_name: mysystem
 
 # When the system should reboot following upgrades:
-# never                              = don't reboot after upgrades
-# when-changed                       = reboot after any changes
-# when-needed                        = reboot when necessary to apply changes
-#au_redhat_reboot: never
+# never = don't reboot after upgrades
+# when-changed = reboot after any changes
+# when-needed = reboot when necessary to apply changes
+# au_redhat_reboot: never
 
-## UBUNTU ##
+# PHASE 1: Fedora-family schedule control (dnf/dnf5 only)
+# If true, the role will manage a systemd timer override for dnf-automatic or dnf5-automatic.
+au_manage_schedule: false
 
+# Explicit systemd OnCalendar expression for Fedora-family timers.
+# Examples:
+# au_timer_on_calendar: "*-*-* 03:00:00"
+# au_timer_on_calendar: "Mon..Fri 02:30"
+# au_timer_on_calendar: "daily"
+au_timer_on_calendar: ""
+
+# Optional RandomizedDelaySec value for the timer override.
+# Examples: "0", "30m", "1h"
+au_timer_randomized_delay_sec: ""
+
+# Whether missed runs should be executed on the next boot.
+au_timer_persistent: true
+
+# DEBIAN / UBUNTU
 # Set this value to one of: "always", "only-on-error" or "on-change"
-#au_mail_report: only-on-error
+# au_mail_report: only-on-error
 
-# Remove unused automatically installed kernel-related packages
-# (kernel images, kernel headers and kernel version locked tools).
-#au_remove_old_kernel: yes
+# Remove unused automatically installed kernel-related packages.
+# au_remove_old_kernel: true
 
-# Do automatic removal of newly unused dependencies after the upgrade
-au_remove_new_unused_dependencies: yes
+# Do automatic removal of newly unused dependencies after the upgrade.
+au_remove_new_unused_dependencies: true
 
-# Do automatic removal of unused packages after the upgrade
-# (equivalent to apt-get autoremove)
-au_remove_unused_dependencies: no
+# Do automatic removal of unused packages after the upgrade.
+au_remove_unused_dependencies: false
 
-# Automatically reboot *WITHOUT CONFIRMATION* if
-# the file /var/run/reboot-required is found after the upgrade
-#au_automatic_reboot: no
+# Automatically reboot WITHOUT CONFIRMATION if a reboot is required.
+# au_automatic_reboot: false
 
-# Automatically reboot even if there are users currently logged in
-# when Unattended-Upgrade::Automatic-Reboot is set to true
-#au_reboot_with_users: yes
+# Automatically reboot even if there are users currently logged in.
+# au_reboot_with_users: true
 
-# If automatic reboot is enabled and needed, reboot at the specific
-# time instead of immediately. Default is "now".
-#au_reboot_time: '02:00'
+# If automatic reboot is enabled and needed, reboot at the specific time.
+# au_reboot_time: '02:00'
 
-# Enable logging to syslog. Default is False
-#au_syslog_enable: no
+# Enable logging to syslog.
+# au_syslog_enable: false
 
-# Specify syslog facility. Default is daemon
-#au_syslog_facility: daemon
+# Specify syslog facility.
+# au_syslog_facility: daemon

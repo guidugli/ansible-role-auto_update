@@ -51,6 +51,46 @@
         quiet: true
       when: ansible_facts.get('pkg_mgr', '') == 'apt'
 
+    - name: Verify apt periodic file enables package list updates
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -F
+          - 'APT::Periodic::Update-Package-Lists "1";'
+          - /etc/apt/apt.conf.d/20auto-upgrades
+      register: au_apt_update_lists
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Assert apt periodic file enables package list updates
+      ansible.builtin.assert:
+        that:
+          - au_apt_update_lists.rc == 0
+        fail_msg: 20auto-upgrades must enable package list updates.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Verify apt periodic file enables unattended upgrades
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -F
+          - 'APT::Periodic::Unattended-Upgrade "1";'
+          - /etc/apt/apt.conf.d/20auto-upgrades
+      register: au_apt_unattended_enabled
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Assert apt periodic file enables unattended upgrades
+      ansible.builtin.assert:
+        that:
+          - au_apt_unattended_enabled.rc == 0
+        fail_msg: 20auto-upgrades must enable unattended upgrades.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
     - name: Stat unattended-upgrades configuration file
       ansible.builtin.stat:
         path: /etc/apt/apt.conf.d/50unattended-upgrades
@@ -65,6 +105,26 @@
           - au_apt_50_stat.stat.gr_name == 'root'
           - au_apt_50_stat.stat.mode == '0644'
         fail_msg: /etc/apt/apt.conf.d/50unattended-upgrades must exist as root:root mode 0644.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Verify unattended-upgrades mail report setting when defined in converge
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -F
+          - 'Unattended-Upgrade::MailReport "only-on-error";'
+          - /etc/apt/apt.conf.d/50unattended-upgrades
+      register: au_apt_mail_report
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Assert unattended-upgrades mail report setting is present
+      ansible.builtin.assert:
+        that:
+          - au_apt_mail_report.rc == 0
+        fail_msg: 50unattended-upgrades must contain the expected MailReport setting.
         quiet: true
       when: ansible_facts.get('pkg_mgr', '') == 'apt'
 
@@ -123,7 +183,67 @@
         quiet: true
       when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
 
-    - name: Check unattended-upgrades service unit on apt systems
+    - name: Verify dnf automatic config uses security update mode
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -F
+          - 'upgrade_type = security'
+          - /etc/dnf/automatic.conf
+      register: au_dnf_upgrade_type
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+
+    - name: Assert dnf automatic config uses security update mode
+      ansible.builtin.assert:
+        that:
+          - au_dnf_upgrade_type.rc == 0
+        fail_msg: automatic.conf must contain 'upgrade_type = security'.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+
+    - name: Verify dnf automatic config applies updates
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -F
+          - 'apply_updates = yes'
+          - /etc/dnf/automatic.conf
+      register: au_dnf_apply_updates
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+
+    - name: Assert dnf automatic config applies updates
+      ansible.builtin.assert:
+        that:
+          - au_dnf_apply_updates.rc == 0
+        fail_msg: automatic.conf must contain 'apply_updates = yes'.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+
+    - name: Verify dnf automatic config emits via stdio
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -F
+          - 'emit_via = stdio'
+          - /etc/dnf/automatic.conf
+      register: au_dnf_emit_via
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+
+    - name: Assert dnf automatic config emits via stdio
+      ansible.builtin.assert:
+        that:
+          - au_dnf_emit_via.rc == 0
+        fail_msg: automatic.conf must contain 'emit_via = stdio'.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+
+    - name: Check unattended-upgrades service unit enablement on apt systems
       ansible.builtin.command:
         argv:
           - systemctl
@@ -147,7 +267,7 @@
         - ansible_facts.get('pkg_mgr', '') == 'apt'
         - ansible_facts.get('service_mgr', '') == 'systemd'
 
-    - name: Check dnf automatic timer on dnf systems
+    - name: Check dnf automatic timer enablement on dnf systems
       ansible.builtin.command:
         argv:
           - systemctl
@@ -171,7 +291,7 @@
         - ansible_facts.get('pkg_mgr', '') == 'dnf'
         - ansible_facts.get('service_mgr', '') == 'systemd'
 
-    - name: Check dnf5 automatic timer on dnf5 systems
+    - name: Check dnf5 automatic timer enablement on dnf5 systems
       ansible.builtin.command:
         argv:
           - systemctl
@@ -194,3 +314,93 @@
       when:
         - ansible_facts.get('pkg_mgr', '') == 'dnf5'
         - ansible_facts.get('service_mgr', '') == 'systemd'
+
+    - name: Check dnf schedule override on dnf systems when schedule management is enabled
+      ansible.builtin.stat:
+        path: /etc/systemd/system/dnf-automatic.timer.d/override.conf
+      register: au_dnf_override_stat
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf'
+        - au_manage_schedule | default(false)
+
+    - name: Assert dnf schedule override exists with secure ownership
+      ansible.builtin.assert:
+        that:
+          - au_dnf_override_stat.stat.exists
+          - au_dnf_override_stat.stat.pw_name == 'root'
+          - au_dnf_override_stat.stat.gr_name == 'root'
+          - au_dnf_override_stat.stat.mode == '0644'
+        fail_msg: dnf-automatic timer override must exist as root:root mode 0644.
+        quiet: true
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf'
+        - au_manage_schedule | default(false)
+
+    - name: Verify dnf schedule override OnCalendar value
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -F
+          - 'OnCalendar={{ au_timer_on_calendar }}'
+          - /etc/systemd/system/dnf-automatic.timer.d/override.conf
+      register: au_dnf_override_calendar
+      changed_when: false
+      failed_when: false
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf'
+        - au_manage_schedule | default(false)
+
+    - name: Assert dnf schedule override OnCalendar value is present
+      ansible.builtin.assert:
+        that:
+          - au_dnf_override_calendar.rc == 0
+        fail_msg: dnf-automatic timer override must contain the expected OnCalendar value.
+        quiet: true
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf'
+        - au_manage_schedule | default(false)
+
+    - name: Check dnf5 schedule override on dnf5 systems when schedule management is enabled
+      ansible.builtin.stat:
+        path: /etc/systemd/system/dnf5-automatic.timer.d/override.conf
+      register: au_dnf5_override_stat
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
+        - au_manage_schedule | default(false)
+
+    - name: Assert dnf5 schedule override exists with secure ownership
+      ansible.builtin.assert:
+        that:
+          - au_dnf5_override_stat.stat.exists
+          - au_dnf5_override_stat.stat.pw_name == 'root'
+          - au_dnf5_override_stat.stat.gr_name == 'root'
+          - au_dnf5_override_stat.stat.mode == '0644'
+        fail_msg: dnf5-automatic timer override must exist as root:root mode 0644.
+        quiet: true
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
+        - au_manage_schedule | default(false)
+
+    - name: Verify dnf5 schedule override OnCalendar value
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -F
+          - 'OnCalendar={{ au_timer_on_calendar }}'
+          - /etc/systemd/system/dnf5-automatic.timer.d/override.conf
+      register: au_dnf5_override_calendar
+      changed_when: false
+      failed_when: false
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
+        - au_manage_schedule | default(false)
+
+    - name: Assert dnf5 schedule override OnCalendar value is present
+      ansible.builtin.assert:
+        that:
+          - au_dnf5_override_calendar.rc == 0
+        fail_msg: dnf5-automatic timer override must contain the expected OnCalendar value.
+        quiet: true
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
+        - au_manage_schedule | default(false)

@@ -20,9 +20,10 @@
 - name: Enable or disable dnf5 automatic timer
   ansible.builtin.systemd_service:
     name: dnf5-automatic.timer
-    state: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
     enabled: "{{ au_enable_auto_update }}"
-  when: au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
+  when:
+    - ansible_facts.get('service_mgr', '') == 'systemd'
+    - au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
 
 - name: Deploy dnf5 automatic configuration
   ansible.builtin.template:
@@ -33,3 +34,43 @@
     mode: '0644'
   when: au_enable_auto_update
   notify: Restart dnf5-automatic service
+
+- name: Ensure systemd override directory exists for dnf5-automatic timer
+  ansible.builtin.file:
+    path: /etc/systemd/system/dnf5-automatic.timer.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when:
+    - au_enable_auto_update
+    - au_manage_schedule | default(false)
+
+- name: Deploy dnf5-automatic timer override
+  ansible.builtin.template:
+    src: systemd_timer_override.conf.j2
+    dest: /etc/systemd/system/dnf5-automatic.timer.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - au_enable_auto_update
+    - au_manage_schedule | default(false)
+  notify:
+    - Reload systemd
+    - Restart dnf5-automatic service
+
+- name: Remove dnf5-automatic timer override when schedule management is disabled
+  ansible.builtin.file:
+    path: /etc/systemd/system/dnf5-automatic.timer.d/override.conf
+    state: absent
+  when: not (au_manage_schedule | default(false))
+  notify:
+    - Reload systemd
+    - Restart dnf5-automatic service
+
+- name: Remove empty dnf5-automatic timer override directory when schedule management is disabled
+  ansible.builtin.file:
+    path: /etc/systemd/system/dnf5-automatic.timer.d
+    state: absent
+  when: not (au_manage_schedule | default(false))

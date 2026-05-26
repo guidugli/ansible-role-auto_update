@@ -34,10 +34,30 @@
     quiet: true
   when: au_reboot_time is defined
 
-- name: Ensure au_automatic_reboot dependencies are valid
+- name: Ensure systemd timer schedule is provided when schedule management is enabled
   ansible.builtin.assert:
     that:
-      - au_reboot_time is not defined or (au_reboot_time is string and au_reboot_time | length > 0)
-    fail_msg: au_reboot_time must be a non-empty string when defined.
+      - au_timer_on_calendar is string
+      - au_timer_on_calendar | length > 0
+    fail_msg: au_timer_on_calendar must be a non-empty string when au_manage_schedule is true.
     quiet: true
-  when: au_automatic_reboot | default(false)
+  when: au_manage_schedule | default(false)
+
+- name: Ensure randomized delay is non-empty when defined
+  ansible.builtin.assert:
+    that:
+      - au_timer_randomized_delay_sec is string
+      - au_timer_randomized_delay_sec | length > 0
+    fail_msg: au_timer_randomized_delay_sec must be a non-empty string when defined.
+    quiet: true
+  when:
+    - au_timer_randomized_delay_sec is defined
+    - au_timer_randomized_delay_sec | length > 0
+
+- name: Ensure Fedora-family scheduling control is only used on dnf/dnf5 systems
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+    fail_msg: au_manage_schedule is currently supported only on dnf/dnf5 systems.
+    quiet: true
+  when: au_manage_schedule | default(false)

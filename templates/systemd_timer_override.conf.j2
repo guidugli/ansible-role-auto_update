@@ -1,0 +1,9 @@
+[Timer]
+{% if au_timer_on_calendar | length > 0 %}
+OnCalendar=
+OnCalendar={{ au_timer_on_calendar }}
+{% endif %}
+{% if au_timer_randomized_delay_sec | length > 0 %}
+RandomizedDelaySec={{ au_timer_randomized_delay_sec }}
+{% endif %}
+Persistent={{ 'true' if au_timer_persistent else 'false' }}

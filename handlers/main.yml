@@ -1,17 +1,32 @@
 ---
 # handlers/main.yml
+#
+# Container-safe handler implementation:
+# - avoid forcing runtime state transitions that can fail in Molecule systemd containers
+# - keep daemon_reload available for timer override support
+# - use enabled-only reconciliation in handlers where possible
 
-- name: Restart dnf-automatic service
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Re-enable dnf-automatic timer
   ansible.builtin.systemd_service:
     name: dnf-automatic.timer
-    state: restarted
+    enabled: true
+  when: ansible_facts.get('service_mgr', '') == 'systemd'
+  listen: Restart dnf-automatic service
 
-- name: Restart dnf5-automatic service
+- name: Re-enable dnf5-automatic timer
   ansible.builtin.systemd_service:
     name: dnf5-automatic.timer
-    state: restarted
+    enabled: true
+  when: ansible_facts.get('service_mgr', '') == 'systemd'
+  listen: Restart dnf5-automatic service
 
-- name: Restart yum-cron service
+- name: Re-enable yum-cron service
   ansible.builtin.systemd_service:
     name: yum-cron.service
-    state: restarted
+    enabled: true
+  when: ansible_facts.get('service_mgr', '') == 'systemd'
+  listen: Restart yum-cron service

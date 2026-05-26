@@ -21,9 +21,10 @@
 - name: Enable or disable unattended-upgrades service
   ansible.builtin.systemd_service:
     name: unattended-upgrades.service
-    state: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
     enabled: "{{ au_enable_auto_update }}"
-  when: au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
+  when:
+    - ansible_facts.get('service_mgr', '') == 'systemd'
+    - au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
 
 - name: Deploy apt automatic update configuration files
   ansible.builtin.template:
