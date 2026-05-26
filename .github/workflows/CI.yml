@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [default]
+        scenario: [systemd]
 
     steps:
       - uses: actions/checkout@v4
