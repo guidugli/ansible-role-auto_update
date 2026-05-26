@@ -1,40 +1,35 @@
 ---
+# tasks/dnf5_autoupdate.yml
 
-# Run this first part only if auto update is not enabled
-- name: Check if package is already installed
+- name: Gather package facts when auto update is disabled
+  ansible.builtin.package_facts:
+    manager: auto
   when: not au_enable_auto_update
-  block:
-    - name: Gather the package facts
-      ansible.builtin.package_facts:
-        manager: rpm
 
-    - name: Create variable to indicate if package is installed
-      ansible.builtin.set_fact:
-        au_pkg_installed: "{{ 'dnf5-plugin-automatic' in ansible_facts.packages }}"
+- name: Record dnf5 automatic plugin presence
+  ansible.builtin.set_fact:
+    au_auto_update_pkg_installed: "{{ 'dnf5-plugin-automatic' in ansible_facts.get('packages', {}) }}"
+  when: not au_enable_auto_update
 
-- name: Install required package dnf-automatic
-  ansible.builtin.dnf:
+- name: Install dnf5 automatic plugin
+  ansible.builtin.package:
     name: dnf5-plugin-automatic
     state: present
   when: au_enable_auto_update
 
-# This task will only run if auto enabled is enabled or if package already exists
-- name: "{{ text }} dnf5-automatic service"
-  vars:
-    text: "{{ 'Enable' if au_enable_auto_update else 'Disable' }}"
-    newstate: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
-  ansible.builtin.systemd:
+- name: Enable or disable dnf5 automatic timer
+  ansible.builtin.systemd_service:
     name: dnf5-automatic.timer
-    state: "{{ newstate }}"
+    state: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
     enabled: "{{ au_enable_auto_update }}"
-  when: au_enable_auto_update or au_pkg_installed
+  when: au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
 
-- name: Configure /etc/dnf/automatic.conf
+- name: Deploy dnf5 automatic configuration
   ansible.builtin.template:
     src: automatic.conf
     dest: /etc/dnf/automatic.conf
     owner: root
     group: root
     mode: '0644'
-    force: yes
   when: au_enable_auto_update
+  notify: Restart dnf5-automatic service

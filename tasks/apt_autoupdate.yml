@@ -1,42 +1,37 @@
 ---
+# tasks/apt_autoupdate.yml
 
-# Run this first part only if auto update is not enabled
-- name: Check if package is already installed
+- name: Gather package facts when auto update is disabled
+  ansible.builtin.package_facts:
+    manager: auto
   when: not au_enable_auto_update
-  block:
-    - name: Gather the package facts
-      ansible.builtin.package_facts:
-        manager: auto
 
-    - name: Create variable to indicate if package is installed
-      ansible.builtin.set_fact:
-        au_auto_udpate_pkg_installed: "{{ 'unattended-upgrades' in ansible_facts.packages }}"
+- name: Record unattended-upgrades package presence
+  ansible.builtin.set_fact:
+    au_auto_update_pkg_installed: "{{ 'unattended-upgrades' in ansible_facts.get('packages', {}) }}"
+  when: not au_enable_auto_update
 
-- name: Install required package unattended-upgrades
+- name: Install unattended-upgrades package
   ansible.builtin.apt:
-    name: ['unattended-upgrades']
+    name: unattended-upgrades
     state: present
-    update_cache: yes
+    update_cache: true
   when: au_enable_auto_update
 
-- name: "{{ text }} unattended-upgrades service"
-  vars:
-    text: "{{ 'Enable' if au_enable_auto_update else 'Disable' }}"
-    newstate: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
-  ansible.builtin.systemd:
+- name: Enable or disable unattended-upgrades service
+  ansible.builtin.systemd_service:
     name: unattended-upgrades.service
-    state: "{{ newstate }}"
+    state: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
     enabled: "{{ au_enable_auto_update }}"
-  when: au_enable_auto_update or au_auto_udpate_pkg_installed
+  when: au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
 
-- name: Configure /etc/apt/apt.conf.d/ files
+- name: Deploy apt automatic update configuration files
   ansible.builtin.template:
     src: "{{ ansible_facts['distribution'] }}/{{ item }}"
     dest: "/etc/apt/apt.conf.d/{{ item }}"
     owner: root
     group: root
     mode: '0644'
-    force: yes
   loop:
     - 20auto-upgrades
     - 50unattended-upgrades

@@ -1,35 +1,31 @@
 ---
+# tasks/yum_autoupdate.yml
+# Legacy backend retained for completeness even though current supported matrix uses apt/dnf/dnf5.
 
-# Run this first part only if auto update is not enabled
-- name: Check if package is already installed
+- name: Gather package facts when auto update is disabled
+  ansible.builtin.package_facts:
+    manager: auto
   when: not au_enable_auto_update
-  block:
-    - name: Gather the package facts
-      ansible.builtin.package_facts:
-        manager: rpm
 
-    - name: Create variable to indicate if package is installed
-      ansible.builtin.set_fact:
-        au_auto_udpate_pkg_installed: "{{ 'yum-cron' in ansible_facts.packages }}"
+- name: Record yum-cron package presence
+  ansible.builtin.set_fact:
+    au_auto_update_pkg_installed: "{{ 'yum-cron' in ansible_facts.get('packages', {}) }}"
+  when: not au_enable_auto_update
 
-- name: Install required package yum-cron
-  ansible.builtin.yum:
+- name: Install yum-cron package
+  ansible.builtin.package:
     name: yum-cron
     state: present
   when: au_enable_auto_update
 
-# This task will only run if auto enabled is enabled or if package already exists
-- name: "{{ text }} yum-cron service"
-  vars:
-    text: "{{ 'Enable' if au_enable_auto_update else 'Disable' }}"
-    newstate: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
-  ansible.builtin.systemd:
+- name: Enable or disable yum-cron service
+  ansible.builtin.systemd_service:
     name: yum-cron.service
-    state: "{{ newstate }}"
+    state: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
     enabled: "{{ au_enable_auto_update }}"
-  when: au_enable_auto_update or au_auto_udpate_pkg_installed
+  when: au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
 
-- name: Configure /etc/yum/yum-cron.conf
+- name: Configure yum-cron
   community.general.ini_file:
     path: /etc/yum/yum-cron.conf
     section: "{{ item.section }}"
@@ -37,12 +33,12 @@
     value: "{{ item.value }}"
     mode: '0644'
   loop:
-    - { section: commands, key: upgrade_cmd, value: "{{ 'security' if au_security_only else 'default' }}" }
-    - { section: commands, key: download_updates, value: "yes" }
-    - { section: commands, key: apply_updates, value: "{{ 'no' if au_download_only else 'yes' }}" }
-    - { section: emitters, key: emit_via, value: "{{ au_emit_via }}" }
-    - { section: email, key: email_from, value: "{{ au_email_from }}" }
-    - { section: email, key: email_to, value: "{{ au_email_to }}" }
-    - { section: email, key: email_host, value: "{{ au_email_server }}" }
+    - { section: 'commands', key: 'upgrade_cmd', value: "{{ 'security' if au_security_only else 'default' }}" }
+    - { section: 'commands', key: 'download_updates', value: 'yes' }
+    - { section: 'commands', key: 'apply_updates', value: "{{ 'no' if au_download_only else 'yes' }}" }
+    - { section: 'emitters', key: 'emit_via', value: "{{ au_emit_via | default('stdio') }}" }
+    - { section: 'email', key: 'email_from', value: "{{ au_email_from }}" }
+    - { section: 'email', key: 'email_to', value: "{{ au_email_to | default('root') }}" }
+    - { section: 'email', key: 'email_host', value: "{{ au_email_server | default('localhost') }}" }
   notify: Restart yum-cron service
   when: au_enable_auto_update

@@ -1,0 +1,196 @@
+---
+- name: Verify auto_update role
+  hosts: all
+  gather_facts: true
+  become: false
+
+  tasks:
+    - name: Assert supported package manager backend is detected
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.get('pkg_mgr', '') in ['apt', 'dnf', 'dnf5', 'yum']
+        fail_msg: >-
+          Unsupported package manager in test environment: {{ ansible_facts.get('pkg_mgr', 'unknown') }}
+        quiet: true
+
+    - name: Check unattended-upgrades package on apt systems
+      ansible.builtin.command:
+        argv:
+          - dpkg-query
+          - -W
+          - -f=${Status}
+          - unattended-upgrades
+      register: au_apt_pkg
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Assert unattended-upgrades package is installed on apt systems
+      ansible.builtin.assert:
+        that:
+          - au_apt_pkg.rc == 0
+          - "'install ok installed' in au_apt_pkg.stdout"
+        fail_msg: unattended-upgrades package is not installed.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Stat apt periodic configuration file
+      ansible.builtin.stat:
+        path: /etc/apt/apt.conf.d/20auto-upgrades
+      register: au_apt_20_stat
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Assert apt periodic configuration file exists with secure ownership
+      ansible.builtin.assert:
+        that:
+          - au_apt_20_stat.stat.exists
+          - au_apt_20_stat.stat.pw_name == 'root'
+          - au_apt_20_stat.stat.gr_name == 'root'
+          - au_apt_20_stat.stat.mode == '0644'
+        fail_msg: /etc/apt/apt.conf.d/20auto-upgrades must exist as root:root mode 0644.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Stat unattended-upgrades configuration file
+      ansible.builtin.stat:
+        path: /etc/apt/apt.conf.d/50unattended-upgrades
+      register: au_apt_50_stat
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Assert unattended-upgrades configuration file exists with secure ownership
+      ansible.builtin.assert:
+        that:
+          - au_apt_50_stat.stat.exists
+          - au_apt_50_stat.stat.pw_name == 'root'
+          - au_apt_50_stat.stat.gr_name == 'root'
+          - au_apt_50_stat.stat.mode == '0644'
+        fail_msg: /etc/apt/apt.conf.d/50unattended-upgrades must exist as root:root mode 0644.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') == 'apt'
+
+    - name: Check dnf-automatic package on dnf systems
+      ansible.builtin.command:
+        argv:
+          - rpm
+          - -q
+          - dnf-automatic
+      register: au_dnf_pkg
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') == 'dnf'
+
+    - name: Assert dnf-automatic package is installed on dnf systems
+      ansible.builtin.assert:
+        that:
+          - au_dnf_pkg.rc == 0
+        fail_msg: dnf-automatic package is not installed.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') == 'dnf'
+
+    - name: Check dnf5 automatic plugin package on dnf5 systems
+      ansible.builtin.command:
+        argv:
+          - rpm
+          - -q
+          - dnf5-plugin-automatic
+      register: au_dnf5_pkg
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.get('pkg_mgr', '') == 'dnf5'
+
+    - name: Assert dnf5 automatic plugin is installed on dnf5 systems
+      ansible.builtin.assert:
+        that:
+          - au_dnf5_pkg.rc == 0
+        fail_msg: dnf5-plugin-automatic package is not installed.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') == 'dnf5'
+
+    - name: Stat dnf automatic configuration file on Fedora-family systems
+      ansible.builtin.stat:
+        path: /etc/dnf/automatic.conf
+      register: au_dnf_conf_stat
+      when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+
+    - name: Assert dnf automatic configuration file exists with secure ownership
+      ansible.builtin.assert:
+        that:
+          - au_dnf_conf_stat.stat.exists
+          - au_dnf_conf_stat.stat.pw_name == 'root'
+          - au_dnf_conf_stat.stat.gr_name == 'root'
+          - au_dnf_conf_stat.stat.mode == '0644'
+        fail_msg: /etc/dnf/automatic.conf must exist as root:root mode 0644.
+        quiet: true
+      when: ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
+
+    - name: Check unattended-upgrades service unit on apt systems
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - is-enabled
+          - unattended-upgrades.service
+      register: au_apt_enabled
+      changed_when: false
+      failed_when: false
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'apt'
+        - ansible_facts.get('service_mgr', '') == 'systemd'
+
+    - name: Assert unattended-upgrades service is enabled on apt systems
+      ansible.builtin.assert:
+        that:
+          - au_apt_enabled.rc == 0
+          - au_apt_enabled.stdout | trim == 'enabled'
+        fail_msg: unattended-upgrades.service should be enabled.
+        quiet: true
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'apt'
+        - ansible_facts.get('service_mgr', '') == 'systemd'
+
+    - name: Check dnf automatic timer on dnf systems
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - is-enabled
+          - dnf-automatic.timer
+      register: au_dnf_enabled
+      changed_when: false
+      failed_when: false
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf'
+        - ansible_facts.get('service_mgr', '') == 'systemd'
+
+    - name: Assert dnf automatic timer is enabled on dnf systems
+      ansible.builtin.assert:
+        that:
+          - au_dnf_enabled.rc == 0
+          - au_dnf_enabled.stdout | trim == 'enabled'
+        fail_msg: dnf-automatic.timer should be enabled.
+        quiet: true
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf'
+        - ansible_facts.get('service_mgr', '') == 'systemd'
+
+    - name: Check dnf5 automatic timer on dnf5 systems
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - is-enabled
+          - dnf5-automatic.timer
+      register: au_dnf5_enabled
+      changed_when: false
+      failed_when: false
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
+        - ansible_facts.get('service_mgr', '') == 'systemd'
+
+    - name: Assert dnf5 automatic timer is enabled on dnf5 systems
+      ansible.builtin.assert:
+        that:
+          - au_dnf5_enabled.rc == 0
+          - au_dnf5_enabled.stdout | trim == 'enabled'
+        fail_msg: dnf5-automatic.timer should be enabled.
+        quiet: true
+      when:
+        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
+        - ansible_facts.get('service_mgr', '') == 'systemd'

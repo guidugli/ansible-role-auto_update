@@ -1,15 +1,50 @@
 ---
-# tasks file for auto_update
+# tasks/main.yml
+# Purpose:
+#   Validate inputs and dispatch to the correct backend implementation.
 
-- name: Execute role
-  block:
+- name: Validate role inputs with argument_specs
+  ansible.builtin.validate_argument_spec:
+    argument_spec: "{{ (lookup('ansible.builtin.file', role_path ~ '/meta/argument_specs.yml') | from_yaml).argument_specs.main.options }}"
+    provided_arguments:
+      au_enable_auto_update: "{{ au_enable_auto_update | default(omit) }}"
+      au_security_only: "{{ au_security_only | default(omit) }}"
+      au_email_from: "{{ au_email_from | default(omit) }}"
+      au_email_to: "{{ au_email_to | default(omit) }}"
+      au_download_only: "{{ au_download_only | default(omit) }}"
+      au_emit_via: "{{ au_emit_via | default(omit) }}"
+      au_command_format: "{{ au_command_format | default(omit) }}"
+      au_stdin_format: "{{ au_stdin_format | default(omit) }}"
+      au_email_server: "{{ au_email_server | default(omit) }}"
+      au_system_name: "{{ au_system_name | default(omit) }}"
+      au_redhat_reboot: "{{ au_redhat_reboot | default(omit) }}"
+      au_mail_report: "{{ au_mail_report | default(omit) }}"
+      au_remove_old_kernel: "{{ au_remove_old_kernel | default(omit) }}"
+      au_remove_new_unused_dependencies: "{{ au_remove_new_unused_dependencies | default(omit) }}"
+      au_remove_unused_dependencies: "{{ au_remove_unused_dependencies | default(omit) }}"
+      au_automatic_reboot: "{{ au_automatic_reboot | default(omit) }}"
+      au_reboot_with_users: "{{ au_reboot_with_users | default(omit) }}"
+      au_reboot_time: "{{ au_reboot_time | default(omit) }}"
+      au_syslog_enable: "{{ au_syslog_enable | default(omit) }}"
+      au_syslog_facility: "{{ au_syslog_facility | default(omit) }}"
 
-    - name: Check package system variables
-      ansible.builtin.import_tasks: assert.yml
-    
-    # RedHat and Debian system are too different in regards of
-    # package management, so keep a task file for each
-    - name: Perform system auto update configuration
-      ansible.builtin.include_tasks: "{{ ansible_pkg_mgr }}_autoupdate.yml"
+- name: Run extra assertion checks
+  ansible.builtin.import_tasks: assert.yml
 
-  become: yes
+- name: Fail on unsupported package manager
+  ansible.builtin.fail:
+    msg: "Unsupported package manager for this role: {{ ansible_facts.get('pkg_mgr', 'unknown') }}"
+  when: ansible_facts.get('pkg_mgr', '') not in ['apt', 'dnf', 'dnf5', 'yum']
+
+- name: Include backend-specific automatic update tasks
+  ansible.builtin.include_tasks:
+    file: >-
+      {{
+        {
+          'apt': 'apt_autoupdate.yml',
+          'dnf': 'dnf_autoupdate.yml',
+          'dnf5': 'dnf5_autoupdate.yml',
+          'yum': 'yum_autoupdate.yml'
+        }[ansible_facts.get('pkg_mgr', '')]
+      }}
+  when: ansible_facts.get('pkg_mgr', '') in ['apt', 'dnf', 'dnf5', 'yum']

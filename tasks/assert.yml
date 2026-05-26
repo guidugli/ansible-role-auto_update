@@ -1,48 +1,43 @@
 ---
+# tasks/assert.yml
+# Extra validation not fully covered by meta/argument_specs.yml.
 
-- name: Check if boolean variables are valid
+- name: Ensure au_email_to is a non-empty string when defined
   ansible.builtin.assert:
     that:
-      - lookup('vars', item) | type_debug == 'bool'
-    quiet: yes
-  when: vars[item] is defined
-  loop:
-    - au_enable_auto_update
-    - au_security_only
-    - au_download_only
-    - au_remove_old_kernel
-    - au_remove_new_unused_dependencies
-    - au_remove_unused_dependencies
-    - au_automatic_reboot
-    - au_reboot_with_users
-    - au_syslog_enable
+      - au_email_to is string
+      - au_email_to | length > 0
+    fail_msg: au_email_to must be a non-empty string.
+    quiet: true
+  when: au_email_to is defined
 
-- name: Check string variables are valid
-  vars:
-    litem: "{{ lookup('vars', item) }}"
+- name: Ensure optional string variables are non-empty when defined
   ansible.builtin.assert:
     that:
-      - litem is string
-      - litem | length > 0
-    quiet: yes
-  when: vars[item] is defined
+      - lookup('vars', item) is string
+      - lookup('vars', item) | length > 0
+    fail_msg: "{{ item }} must be a non-empty string when defined."
+    quiet: true
   loop:
-    - au_email_from
-    - au_email_to
-    - au_emit_via
     - au_command_format
     - au_stdin_format
     - au_email_server
-    - au_mail_report
-    - au_reboot_time
+    - au_system_name
     - au_syslog_facility
+  when: lookup('vars', item, default=omit) is not sameas omit
 
-- name: Check string variables values
+- name: Ensure au_reboot_time format is valid when defined
   ansible.builtin.assert:
     that:
-      - (au_emit_via is undefined) or au_emit_via in ['stdio', 'email', 'motd']
-      - (au_mail_report is undefined) or au_mail_report in ['always', 'only-on-error', 'on-change']
-      - (au_reboot_time is undefined) or au_reboot_time is regex('(now|\d\d\:\d\d)')
-      - au_system_name is undefined or (au_system_name is string and au_system_name | length > 0)
-      - (au_redhat_reboot is undefined) or (au_redhat_reboot in ['never', 'when-changed', 'when-needed'])
-    quiet: yes
+      - au_reboot_time is regex('^(?:now|[0-2][0-9]:[0-5][0-9])$')
+    fail_msg: au_reboot_time must be 'now' or in HH:MM format.
+    quiet: true
+  when: au_reboot_time is defined
+
+- name: Ensure au_automatic_reboot dependencies are valid
+  ansible.builtin.assert:
+    that:
+      - au_reboot_time is not defined or (au_reboot_time is string and au_reboot_time | length > 0)
+    fail_msg: au_reboot_time must be a non-empty string when defined.
+    quiet: true
+  when: au_automatic_reboot | default(false)
