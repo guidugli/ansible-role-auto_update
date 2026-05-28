@@ -1,7 +1,7 @@
 ---
 # Generated file. Do not edit directly.
-# Source template: meta_main.yml.j2
-# Generated on: 2026-05-26T04:46:43Z
+# Source template: /home/carlospg/ansible-venv/ansible-role-auto_update/templates/meta_main.yml.j2
+# Generated on: 2026-05-28T01:34:23Z
 
 dependencies: []
 
@@ -9,17 +9,11 @@ galaxy_info:
   role_name: auto_update
   namespace: guidugli
   author: guidugli
-  company: Creuzo Tech
-
   description: >-
     Install and configure automatic package update tooling on Debian, Ubuntu,
     and Fedora systems.
-    This role focuses on package installation and configuration management,
-    with multi-distribution support and container-friendly testability.
-
   license: MIT
-  min_ansible_version: "2.14"
-
+  min_ansible_version: '2.14'
   platforms:
     - name: Fedora
       versions:
@@ -32,8 +26,7 @@ galaxy_info:
     - name: Debian
       versions:
         - "trixie"
-        - "bookworm"
-
+        - "bullseye"
   galaxy_tags:
     - updates
     - automatic

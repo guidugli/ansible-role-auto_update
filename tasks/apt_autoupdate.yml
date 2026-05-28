@@ -1,6 +1,4 @@
 ---
-# tasks/apt_autoupdate.yml
-
 - name: Gather package facts when auto update is disabled
   ansible.builtin.package_facts:
     manager: auto
@@ -18,7 +16,7 @@
     update_cache: true
   when: au_enable_auto_update
 
-- name: Enable or disable unattended-upgrades service
+- name: Manage unattended-upgrades service enablement
   ansible.builtin.systemd_service:
     name: unattended-upgrades.service
     enabled: "{{ au_enable_auto_update }}"

@@ -1,63 +1,49 @@
 ---
-# tasks/assert.yml
-# Extra validation not fully covered by meta/argument_specs.yml.
+# Semantic validation beyond argument_specs.yml.
 
-- name: Ensure au_email_to is a non-empty string when defined
+- name: Ensure optional string variables are not whitespace-only when provided
   ansible.builtin.assert:
     that:
-      - au_email_to is string
-      - au_email_to | length > 0
-    fail_msg: au_email_to must be a non-empty string.
-    quiet: true
-  when: au_email_to is defined
-
-- name: Ensure optional string variables are non-empty when defined
-  ansible.builtin.assert:
-    that:
-      - lookup('vars', item) is string
-      - lookup('vars', item) | length > 0
-    fail_msg: "{{ item }} must be a non-empty string when defined."
+      - (lookup('ansible.builtin.vars', item.name) | string | trim | length) > 0
+    fail_msg: "{{ item.name }} must not be whitespace-only when provided."
     quiet: true
   loop:
-    - au_command_format
-    - au_stdin_format
-    - au_email_server
-    - au_system_name
-    - au_syslog_facility
-  when: lookup('vars', item, default=omit) is not sameas omit
-
-- name: Ensure au_reboot_time format is valid when defined
-  ansible.builtin.assert:
-    that:
-      - au_reboot_time is regex('^(?:now|[0-2][0-9]:[0-5][0-9])$')
-    fail_msg: au_reboot_time must be 'now' or in HH:MM format.
-    quiet: true
-  when: au_reboot_time is defined
-
-- name: Ensure systemd timer schedule is provided when schedule management is enabled
-  ansible.builtin.assert:
-    that:
-      - au_timer_on_calendar is string
-      - au_timer_on_calendar | length > 0
-    fail_msg: au_timer_on_calendar must be a non-empty string when au_manage_schedule is true.
-    quiet: true
-  when: au_manage_schedule | default(false)
-
-- name: Ensure randomized delay is non-empty when defined
-  ansible.builtin.assert:
-    that:
-      - au_timer_randomized_delay_sec is string
-      - au_timer_randomized_delay_sec | length > 0
-    fail_msg: au_timer_randomized_delay_sec must be a non-empty string when defined.
-    quiet: true
+    - { name: 'au_email_to' }
+    - { name: 'au_command_format' }
+    - { name: 'au_stdin_format' }
+    - { name: 'au_email_server' }
+    - { name: 'au_system_name' }
+    - { name: 'au_syslog_facility' }
   when:
-    - au_timer_randomized_delay_sec is defined
-    - au_timer_randomized_delay_sec | length > 0
+    - lookup('ansible.builtin.vars', item.name, default='') | string | length > 0
 
-- name: Ensure Fedora-family scheduling control is only used on dnf/dnf5 systems
+- name: Ensure au_reboot_time format is valid
+  ansible.builtin.assert:
+    that:
+      - au_reboot_time is regex('^(?:now|(?:[01][0-9]|2[0-3]):[0-5][0-9])$')
+    fail_msg: "au_reboot_time must be 'now' or in HH:MM format."
+    quiet: true
+
+- name: Ensure timer schedule is provided when schedule management is enabled
+  ansible.builtin.assert:
+    that:
+      - (au_timer_on_calendar | string | trim | length) > 0
+    fail_msg: "au_timer_on_calendar must be a non-empty string when au_manage_schedule is true."
+    quiet: true
+  when: au_manage_schedule | bool
+
+- name: Ensure randomized delay is not whitespace-only when provided
+  ansible.builtin.assert:
+    that:
+      - (au_timer_randomized_delay_sec | string | trim | length) > 0
+    fail_msg: "au_timer_randomized_delay_sec must not be whitespace-only when provided."
+    quiet: true
+  when: au_timer_randomized_delay_sec | string | length > 0
+
+- name: Ensure schedule management is only used on dnf or dnf5 systems
   ansible.builtin.assert:
     that:
       - ansible_facts.get('pkg_mgr', '') in ['dnf', 'dnf5']
-    fail_msg: au_manage_schedule is currently supported only on dnf/dnf5 systems.
+    fail_msg: "au_manage_schedule is currently supported only on dnf and dnf5 systems."
     quiet: true
-  when: au_manage_schedule | default(false)
+  when: au_manage_schedule | bool

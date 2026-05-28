@@ -1,257 +1,144 @@
-# Ansible Role: `auto_update`
+# Ansible Role: auto_update
 
-Install and configure automatic package update tooling on Debian, Ubuntu, and Fedora systems.
+[![CI](https://github.com/guidugli/ansible-role-auto_update/actions/workflows/CI.yml/badge.svg)](https://github.com/guidugli/ansible-role-auto_update/actions/workflows/CI.yml)
+[![Release](https://github.com/guidugli/ansible-role-auto_update/actions/workflows/release.yml/badge.svg)](https://github.com/guidugli/ansible-role-auto_update/actions/workflows/release.yml)
+[![Galaxy](https://img.shields.io/badge/Galaxy-guidugli.auto__update-blue)](https://galaxy.ansible.com/ui/standalone/roles/guidugli/auto_update/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-This role is designed to:
-- enable or disable automatic system updates
-- configure unattended upgrades on Debian/Ubuntu
-- configure dnf automatic updates on Fedora
-- optionally keep update notifications and reboot behavior under policy control
-- support the shared Molecule matrix used across the other modernized roles
+Install and configure automatic package update tooling on Debian, Ubuntu, Fedora, and legacy yum-based systems.
 
----
+## Overview
+
+This role manages the platform-appropriate automatic update backend:
+
+- **APT / unattended-upgrades** on Debian and Ubuntu
+- **dnf-automatic** on dnf-based Fedora systems
+- **dnf5-plugin-automatic** on dnf5-based Fedora systems
+- **yum-cron** on legacy yum systems
+
+The role is designed to stay consistent with the conventions used in the modernized role ecosystem:
+
+- explicit public defaults in `defaults/main.yml`
+- `meta/argument_specs.yml` for type and choice validation
+- `tasks/assert.yml` for semantic validation
+- clean `tasks/main.yml` validation + backend dispatch
+- generator-first metadata flow for `meta/main.yml`
+- shared Molecule layout with meaningful verification
+- role behavior separated from play-level privilege escalation
 
 ## Features
 
-- Installs the required automatic update package for the target platform
-- Configures Debian/Ubuntu `unattended-upgrades`
-- Configures Fedora `dnf-automatic` or `dnf5-automatic` depending on the detected package manager
-- Can disable the service/timer if automatic updates are not desired and the package is already installed
-- Supports security-only update mode where available
-- Supports optional email/syslog/reporting/reboot settings
-- Uses a platform-aware backend selected from the detected package manager
-
----
+- Enables or disables automatic updates through a single role toggle
+- Supports security-only update mode where the backend supports it
+- Manages unattended-upgrades on Debian and Ubuntu
+- Manages dnf-automatic or dnf5 automatic tooling on Fedora
+- Optionally manages a systemd timer override for dnf / dnf5 scheduling
+- Keeps service and timer management container-friendly for Molecule idempotency
+- Uses generated metadata and generated inventories from shared test data
 
 ## Requirements
 
-- Ansible >= 2.14
+- Ansible **2.14+**
 - Python available on target hosts
-- Root or privilege escalation capability to manage packages, services, and configuration files
-
----
+- Privilege escalation capable play when package or configuration changes are required
 
 ## Supported platforms
 
-This repository is structured to support the latest two:
-- Ubuntu LTS releases
-- Debian releases
-- Fedora releases
+The repository is structured around the latest shared matrix used across the modernized roles:
 
-The current shared Molecule matrix includes:
 - Ubuntu 26.04 / 24.04
 - Debian 13 / 12
 - Fedora 44 / 43
 
----
+Galaxy metadata is rendered from the shared matrix and converted to the correct platform version strings.
 
-## Recommended Galaxy metadata
-
-### Description
-
-Recommended role description:
-
-> Install and configure automatic package update tooling on Debian, Ubuntu, and Fedora systems.
-
-### Recommended `galaxy_tags`
-
-```yaml
-galaxy_tags:
-  - updates
-  - automatic
-  - patching
-  - security
-  - unattended
-  - apt
-  - dnf
-  - linux
-  - maintenance
-```
-
----
-
-## Role Variables
-
-## Default Variables (`defaults/main.yml`)
+## Role variables
 
 ### Core toggle
 
-#### `au_enable_auto_update`
 ```yaml
-au_enable_auto_update: yes
+au_enable_auto_update: true
 ```
+
 Enable or disable automatic updates.
 
-If set to `no`, the role disables the relevant service/timer only when the related package is already installed.
-
----
+When set to `false`, the role disables the relevant service or timer **only if** the corresponding package is already installed.
 
 ### Shared behavior
 
-#### `au_security_only`
 ```yaml
-au_security_only: yes
-```
-Limit updates to security updates when supported by the backend.
-
-#### `au_email_from`
-```yaml
+au_security_only: true
 au_email_from: root
+au_email_to: null
 ```
-Sender address used in update notifications.
 
-#### `au_email_to`
+### Fedora / Red Hat family behavior
+
 ```yaml
-# au_email_to: admin@someorg.local
+au_download_only: false
+au_emit_via: null
+au_command_format: null
+au_stdin_format: null
+au_email_server: null
+au_system_name: null
+au_redhat_reboot: null
 ```
-Optional recipient address for update notifications.
 
----
+### Fedora schedule control (`dnf` / `dnf5`)
 
-### Red Hat / Fedora-related settings
-
-#### `au_download_only`
 ```yaml
-au_download_only: no
+au_manage_schedule: false
+au_timer_on_calendar: ''
+au_timer_randomized_delay_sec: ''
+au_timer_persistent: true
 ```
-If `yes`, download updates without applying them.
 
-#### `au_emit_via`
+### Debian / Ubuntu unattended-upgrades behavior
+
 ```yaml
-# au_emit_via: stdio
+au_mail_report: null
+au_remove_old_kernel: null
+au_remove_new_unused_dependencies: true
+au_remove_unused_dependencies: false
+au_automatic_reboot: null
+au_reboot_with_users: null
+au_reboot_time: null
+au_syslog_enable: null
+au_syslog_facility: null
 ```
-Notification channel used by automatic update tooling.
-Valid values:
-- `stdio`
-- `email`
-- `motd`
 
-#### `au_command_format`
-```yaml
-# au_command_format: "mail -s -r "
-```
-Command format used for command-based mail emitters.
+## Built-in package sets / important behavior
 
-#### `au_stdin_format`
-```yaml
-# au_stdin_format: ""
-```
-Standard input format used with command-based emitters.
+### APT backend
 
-#### `au_email_server`
-```yaml
-# au_email_server: localhost
-```
-SMTP server hostname or IP.
+The role installs and manages:
 
-#### `au_system_name`
-```yaml
-# au_system_name: mysystem
-```
-Friendly system name used in notifications.
+- `unattended-upgrades`
+- `/etc/apt/apt.conf.d/20auto-upgrades`
+- `/etc/apt/apt.conf.d/50unattended-upgrades`
+- `unattended-upgrades.service` enablement when systemd is present
 
-#### `au_redhat_reboot`
-```yaml
-# au_redhat_reboot: never
-```
-Reboot policy after updates on Red Hat family systems.
-Valid values:
-- `never`
-- `when-changed`
-- `when-needed`
+### DNF / DNF5 backend
 
----
+The role installs and manages:
 
-### Debian / Ubuntu unattended-upgrades settings
+- `dnf-automatic` or `dnf5-plugin-automatic`
+- `/etc/dnf/automatic.conf`
+- backend timer enablement when systemd is present
+- optional systemd override files when schedule control is enabled
 
-#### `au_mail_report`
-```yaml
-# au_mail_report: only-on-error
-```
-Mail reporting policy.
-Valid values:
-- `always`
-- `only-on-error`
-- `on-change`
+### Legacy YUM backend
 
-#### `au_remove_old_kernel`
-```yaml
-# au_remove_old_kernel: yes
-```
-Remove unused automatically installed kernel-related packages.
+The role retains `yum-cron` support for completeness, although it is outside the primary Molecule matrix.
 
-#### `au_remove_new_unused_dependencies`
-```yaml
-au_remove_new_unused_dependencies: yes
-```
-Remove newly unused dependencies after upgrade.
+## How it works
 
-#### `au_remove_unused_dependencies`
-```yaml
-au_remove_unused_dependencies: no
-```
-Remove unused packages after upgrade.
+1. `meta/argument_specs.yml` validates supported options and base choices.
+2. `tasks/assert.yml` validates semantic rules such as reboot time formatting and schedule requirements.
+3. `tasks/main.yml` maps the detected package manager to the backend task file.
+4. The selected backend configures packages, files, and service/timer enablement in an idempotent way.
 
-#### `au_automatic_reboot`
-```yaml
-# au_automatic_reboot: no
-```
-Automatically reboot when unattended-upgrades determines a reboot is required.
-
-#### `au_reboot_with_users`
-```yaml
-# au_reboot_with_users: yes
-```
-Allow automatic reboot even if users are currently logged in.
-
-#### `au_reboot_time`
-```yaml
-# au_reboot_time: '02:00'
-```
-Scheduled automatic reboot time.
-Valid values:
-- `now`
-- `HH:MM`
-
-#### `au_syslog_enable`
-```yaml
-# au_syslog_enable: no
-```
-Enable unattended-upgrades syslog logging.
-
-#### `au_syslog_facility`
-```yaml
-# au_syslog_facility: daemon
-```
-Syslog facility used by unattended-upgrades.
-
----
-
-## Validation model
-
-This role uses a two-layer validation approach:
-
-1. **`meta/argument_specs.yml`**
-   - validates supported variables
-   - checks types and base choices
-
-2. **`tasks/assert.yml`**
-   - validates additional semantic constraints such as reboot time format and optional non-empty string variables
-
----
-
-## Backend behavior
-
-The role selects an implementation based on the detected package manager:
-
-- `apt` -> `unattended-upgrades`
-- `dnf` -> `dnf-automatic`
-- `dnf5` -> `dnf5-plugin-automatic`
-- `yum` -> legacy `yum-cron` support retained for completeness
-
----
-
-## Example Playbook
+## Usage examples
 
 ### Minimal example
 
@@ -259,7 +146,6 @@ The role selects an implementation based on the detected package manager:
 - name: Enable automatic updates
   hosts: all
   become: true
-
   roles:
     - role: guidugli.auto_update
 ```
@@ -270,7 +156,6 @@ The role selects an implementation based on the detected package manager:
 - name: Configure security-only automatic updates
   hosts: all
   become: true
-
   roles:
     - role: guidugli.auto_update
       vars:
@@ -278,6 +163,22 @@ The role selects an implementation based on the detected package manager:
         au_security_only: true
         au_email_from: root
         au_email_to: ops@example.local
+        au_mail_report: only-on-error
+```
+
+### DNF timer override example
+
+```yaml
+- name: Configure automatic updates with explicit schedule
+  hosts: fedora
+  become: true
+  roles:
+    - role: guidugli.auto_update
+      vars:
+        au_manage_schedule: true
+        au_timer_on_calendar: 'Mon..Fri 02:30'
+        au_timer_randomized_delay_sec: '30m'
+        au_timer_persistent: true
 ```
 
 ### Disable automatic updates
@@ -286,47 +187,49 @@ The role selects an implementation based on the detected package manager:
 - name: Disable automatic updates
   hosts: all
   become: true
-
   roles:
     - role: guidugli.auto_update
       vars:
         au_enable_auto_update: false
 ```
 
----
+## Design notes
 
-## What the role configures
+### Privilege escalation / become
 
-### Debian / Ubuntu
+This role does **not** force `become` inside the role tasks.
 
-- installs `unattended-upgrades` when enabled
-- manages:
-  - `/etc/apt/apt.conf.d/20auto-upgrades`
-  - `/etc/apt/apt.conf.d/50unattended-upgrades`
-- enables or disables `unattended-upgrades.service`
+Recommended pattern:
 
-### Fedora (`dnf` / `dnf5`)
+- callers set `become: true` in the play when needed
+- Molecule scenarios decide whether privilege escalation is appropriate for the scenario model
 
-- installs the related automatic update package when enabled
-- manages:
-  - `/etc/dnf/automatic.conf`
-- enables or disables the related timer:
-  - `dnf-automatic.timer`
-  - `dnf5-automatic.timer`
+### Raw usage
 
-### Legacy yum backend
+This is **not** a pre-Python bootstrap role. Normal Ansible modules are used for role behavior.
+Only Molecule prepare steps may use `raw` to bootstrap Python inside test containers.
 
-- retains optional `yum-cron` support for compatibility outside the current main matrix
+### Idempotency
 
----
+To keep containerized tests stable and idempotent:
 
-## Testing
+- systemd handlers reconcile enablement instead of forcing runtime state transitions
+- backend tasks avoid starting timers/services unnecessarily in container scenarios
+- schedule override files are created and removed predictably
 
-This role uses **Molecule + Podman** and the same shared/default/systemd scenario layout used by the other updated roles.
+## Molecule testing
 
-### Scenarios
-- `default`
-- `systemd`
+The repository is aligned to a shared Molecule layout:
+
+```text
+molecule/
+  shared/
+    vars.yml
+    converge.yml
+    verify.yml
+  default/
+  systemd/
+```
 
 ### Run locally
 
@@ -334,31 +237,28 @@ This role uses **Molecule + Podman** and the same shared/default/systemd scenari
 ./scripts/run_local.sh
 ```
 
-or individually:
+Or run scenarios individually:
 
 ```bash
 molecule test -s default
 molecule test -s systemd
 ```
 
----
+## Release workflow
 
-## Release metadata workflow
-
-Like the other modernized roles, this repository uses generated metadata based on the shared Molecule matrix.
+Generated artifacts should come from the shared metadata flow rather than manual edits.
 
 ### Source of truth
 
-```text
-molecule/shared/vars.yml
-```
+- `molecule/shared/vars.yml`
+- `templates/meta_main.yml.j2`
 
-This drives:
-- tested platforms
-- generated inventories
-- generated `meta/main.yml`
+### Generated outputs
 
-### Refresh metadata
+- `meta/main.yml`
+- Molecule inventories
+
+### Refresh generated artifacts
 
 ```bash
 ./scripts/update_release_metadata.sh
@@ -370,14 +270,25 @@ This drives:
 ./scripts/release.sh --version v1.2.0 --message "Release v1.2.0"
 ```
 
----
-
-## Relevant project structure
+## Repository structure
 
 ```text
 defaults/
   main.yml
-
+handlers/
+  main.yml
+meta/
+  argument_specs.yml
+  main.yml
+molecule/
+  shared/
+  default/
+  systemd/
+scripts/
+  render_inventory.py
+  render_meta_main.py
+  update_release_metadata.sh
+  release.sh
 tasks/
   main.yml
   assert.yml
@@ -385,43 +296,17 @@ tasks/
   dnf_autoupdate.yml
   dnf5_autoupdate.yml
   yum_autoupdate.yml
-
-handlers/
-  main.yml
-
 templates/
   Debian/
   Ubuntu/
   automatic.conf
+  systemd_timer_override.conf.j2
   meta_main.yml.j2
-
-meta/
-  main.yml
-  argument_specs.yml
-
-molecule/
-  shared/
-  default/
-  systemd/
 ```
-
----
-
-## Notes from the repository review
-
-A few current repository details are worth correcting when you apply the generated files:
-
-- the current `templates/meta_main.yml.j2` still has the wrong `role_name` (`chrony`) and unrelated chrony/time-sync tags
-- the current `molecule/shared/verify.yml` is still copied from the audit role and should be replaced later with an auto-update-specific verifier
-- the current role-level task flow still relies on older `become`/dispatch patterns that can be simplified with `validate_argument_spec` and backend mapping
-
----
 
 ## License
 
 MIT
-
----
 
 ## Author
 

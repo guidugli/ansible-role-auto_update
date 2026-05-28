@@ -1,34 +1,8 @@
 ---
-# tasks/main.yml
-# Purpose:
-#   Validate inputs and dispatch to the correct backend implementation.
+# Role argument_specs are validated automatically by Ansible before task execution.
+# This task file performs semantic validation and backend dispatch only.
 
-- name: Validate role inputs with argument_specs
-  ansible.builtin.validate_argument_spec:
-    argument_spec: "{{ (lookup('ansible.builtin.file', role_path ~ '/meta/argument_specs.yml') | from_yaml).argument_specs.main.options }}"
-    provided_arguments:
-      au_enable_auto_update: "{{ au_enable_auto_update | default(omit) }}"
-      au_security_only: "{{ au_security_only | default(omit) }}"
-      au_email_from: "{{ au_email_from | default(omit) }}"
-      au_email_to: "{{ au_email_to | default(omit) }}"
-      au_download_only: "{{ au_download_only | default(omit) }}"
-      au_emit_via: "{{ au_emit_via | default(omit) }}"
-      au_command_format: "{{ au_command_format | default(omit) }}"
-      au_stdin_format: "{{ au_stdin_format | default(omit) }}"
-      au_email_server: "{{ au_email_server | default(omit) }}"
-      au_system_name: "{{ au_system_name | default(omit) }}"
-      au_redhat_reboot: "{{ au_redhat_reboot | default(omit) }}"
-      au_mail_report: "{{ au_mail_report | default(omit) }}"
-      au_remove_old_kernel: "{{ au_remove_old_kernel | default(omit) }}"
-      au_remove_new_unused_dependencies: "{{ au_remove_new_unused_dependencies | default(omit) }}"
-      au_remove_unused_dependencies: "{{ au_remove_unused_dependencies | default(omit) }}"
-      au_automatic_reboot: "{{ au_automatic_reboot | default(omit) }}"
-      au_reboot_with_users: "{{ au_reboot_with_users | default(omit) }}"
-      au_reboot_time: "{{ au_reboot_time | default(omit) }}"
-      au_syslog_enable: "{{ au_syslog_enable | default(omit) }}"
-      au_syslog_facility: "{{ au_syslog_facility | default(omit) }}"
-
-- name: Run extra assertion checks
+- name: Run semantic validation
   ansible.builtin.import_tasks: assert.yml
 
 - name: Fail on unsupported package manager
@@ -47,4 +21,3 @@
           'yum': 'yum_autoupdate.yml'
         }[ansible_facts.get('pkg_mgr', '')]
       }}
-  when: ansible_facts.get('pkg_mgr', '') in ['apt', 'dnf', 'dnf5', 'yum']

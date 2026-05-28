@@ -1,6 +1,5 @@
 ---
-# tasks/yum_autoupdate.yml
-# Legacy backend retained for completeness even though current supported matrix uses apt/dnf/dnf5.
+# Legacy backend retained for completeness even though the main supported matrix uses apt, dnf, and dnf5.
 
 - name: Gather package facts when auto update is disabled
   ansible.builtin.package_facts:
@@ -18,12 +17,13 @@
     state: present
   when: au_enable_auto_update
 
-- name: Enable or disable yum-cron service
+- name: Manage yum-cron service enablement
   ansible.builtin.systemd_service:
     name: yum-cron.service
-    state: "{{ 'started' if au_enable_auto_update else 'stopped' }}"
     enabled: "{{ au_enable_auto_update }}"
-  when: au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
+  when:
+    - ansible_facts.get('service_mgr', '') == 'systemd'
+    - au_enable_auto_update or (au_auto_update_pkg_installed | default(false))
 
 - name: Configure yum-cron
   community.general.ini_file:
@@ -33,12 +33,26 @@
     value: "{{ item.value }}"
     mode: '0644'
   loop:
-    - { section: 'commands', key: 'upgrade_cmd', value: "{{ 'security' if au_security_only else 'default' }}" }
-    - { section: 'commands', key: 'download_updates', value: 'yes' }
-    - { section: 'commands', key: 'apply_updates', value: "{{ 'no' if au_download_only else 'yes' }}" }
-    - { section: 'emitters', key: 'emit_via', value: "{{ au_emit_via | default('stdio') }}" }
-    - { section: 'email', key: 'email_from', value: "{{ au_email_from }}" }
-    - { section: 'email', key: 'email_to', value: "{{ au_email_to | default('root') }}" }
-    - { section: 'email', key: 'email_host', value: "{{ au_email_server | default('localhost') }}" }
-  notify: Restart yum-cron service
+    - section: commands
+      key: upgrade_cmd
+      value: "{{ 'security' if au_security_only else 'default' }}"
+    - section: commands
+      key: download_updates
+      value: 'yes'
+    - section: commands
+      key: apply_updates
+      value: "{{ 'no' if au_download_only else 'yes' }}"
+    - section: emitters
+      key: emit_via
+      value: "{{ au_emit_via | default('stdio', true) }}"
+    - section: email
+      key: email_from
+      value: "{{ au_email_from }}"
+    - section: email
+      key: email_to
+      value: "{{ au_email_to | default('root', true) }}"
+    - section: email
+      key: email_host
+      value: "{{ au_email_server | default('localhost', true) }}"
   when: au_enable_auto_update
+  notify: Restart yum-cron service

@@ -9,17 +9,11 @@ galaxy_info:
   role_name: auto_update
   namespace: guidugli
   author: guidugli
-  company: Creuzo Tech
-
   description: >-
     Install and configure automatic package update tooling on Debian, Ubuntu,
     and Fedora systems.
-    This role focuses on package installation and configuration management,
-    with multi-distribution support and container-friendly testability.
-
   license: MIT
-  min_ansible_version: "2.14"
-
+  min_ansible_version: '2.14'
   platforms:
 {% for platform in platforms %}
     - name: {{ platform.name }}
@@ -28,7 +22,6 @@ galaxy_info:
         - {{ version | tojson }}
 {% endfor %}
 {% endfor %}
-
   galaxy_tags:
     - updates
     - automatic

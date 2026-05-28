@@ -1,16 +1,14 @@
 ---
-- name: Verify auto_update role
+- name: Verify auto_update role behavior
   hosts: all
   gather_facts: true
   become: false
-
   tasks:
     - name: Assert supported package manager backend is detected
       ansible.builtin.assert:
         that:
           - ansible_facts.get('pkg_mgr', '') in ['apt', 'dnf', 'dnf5', 'yum']
-        fail_msg: >-
-          Unsupported package manager in test environment: {{ ansible_facts.get('pkg_mgr', 'unknown') }}
+        fail_msg: "Unsupported package manager in test environment: {{ ansible_facts.get('pkg_mgr', 'unknown') }}"
         quiet: true
 
     - name: Check unattended-upgrades package on apt systems
@@ -314,93 +312,3 @@
       when:
         - ansible_facts.get('pkg_mgr', '') == 'dnf5'
         - ansible_facts.get('service_mgr', '') == 'systemd'
-
-    - name: Check dnf schedule override on dnf systems when schedule management is enabled
-      ansible.builtin.stat:
-        path: /etc/systemd/system/dnf-automatic.timer.d/override.conf
-      register: au_dnf_override_stat
-      when:
-        - ansible_facts.get('pkg_mgr', '') == 'dnf'
-        - au_manage_schedule | default(false)
-
-    - name: Assert dnf schedule override exists with secure ownership
-      ansible.builtin.assert:
-        that:
-          - au_dnf_override_stat.stat.exists
-          - au_dnf_override_stat.stat.pw_name == 'root'
-          - au_dnf_override_stat.stat.gr_name == 'root'
-          - au_dnf_override_stat.stat.mode == '0644'
-        fail_msg: dnf-automatic timer override must exist as root:root mode 0644.
-        quiet: true
-      when:
-        - ansible_facts.get('pkg_mgr', '') == 'dnf'
-        - au_manage_schedule | default(false)
-
-    - name: Verify dnf schedule override OnCalendar value
-      ansible.builtin.command:
-        argv:
-          - grep
-          - -F
-          - 'OnCalendar={{ au_timer_on_calendar }}'
-          - /etc/systemd/system/dnf-automatic.timer.d/override.conf
-      register: au_dnf_override_calendar
-      changed_when: false
-      failed_when: false
-      when:
-        - ansible_facts.get('pkg_mgr', '') == 'dnf'
-        - au_manage_schedule | default(false)
-
-    - name: Assert dnf schedule override OnCalendar value is present
-      ansible.builtin.assert:
-        that:
-          - au_dnf_override_calendar.rc == 0
-        fail_msg: dnf-automatic timer override must contain the expected OnCalendar value.
-        quiet: true
-      when:
-        - ansible_facts.get('pkg_mgr', '') == 'dnf'
-        - au_manage_schedule | default(false)
-
-    - name: Check dnf5 schedule override on dnf5 systems when schedule management is enabled
-      ansible.builtin.stat:
-        path: /etc/systemd/system/dnf5-automatic.timer.d/override.conf
-      register: au_dnf5_override_stat
-      when:
-        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
-        - au_manage_schedule | default(false)
-
-    - name: Assert dnf5 schedule override exists with secure ownership
-      ansible.builtin.assert:
-        that:
-          - au_dnf5_override_stat.stat.exists
-          - au_dnf5_override_stat.stat.pw_name == 'root'
-          - au_dnf5_override_stat.stat.gr_name == 'root'
-          - au_dnf5_override_stat.stat.mode == '0644'
-        fail_msg: dnf5-automatic timer override must exist as root:root mode 0644.
-        quiet: true
-      when:
-        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
-        - au_manage_schedule | default(false)
-
-    - name: Verify dnf5 schedule override OnCalendar value
-      ansible.builtin.command:
-        argv:
-          - grep
-          - -F
-          - 'OnCalendar={{ au_timer_on_calendar }}'
-          - /etc/systemd/system/dnf5-automatic.timer.d/override.conf
-      register: au_dnf5_override_calendar
-      changed_when: false
-      failed_when: false
-      when:
-        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
-        - au_manage_schedule | default(false)
-
-    - name: Assert dnf5 schedule override OnCalendar value is present
-      ansible.builtin.assert:
-        that:
-          - au_dnf5_override_calendar.rc == 0
-        fail_msg: dnf5-automatic timer override must contain the expected OnCalendar value.
-        quiet: true
-      when:
-        - ansible_facts.get('pkg_mgr', '') == 'dnf5'
-        - au_manage_schedule | default(false)

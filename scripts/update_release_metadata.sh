@@ -1,28 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# update_release_metadata.sh
-#
-# Purpose:
-#   1) Run scripts/update_matrix.py to refresh the shared Molecule matrix
-#      (molecule/shared/vars.yml) and regenerate scenario inventories.
-#   2) Render meta/main.yml from templates/meta_main.yml.j2 using that shared vars file.
-#
-# Default usage:
-#   ./scripts/update_release_metadata.sh
-#
-# Alternative usage:
-#   ./scripts/update_release_metadata.sh --skip-update-matrix
-#   ./scripts/update_release_metadata.sh --python python3.12
-#   ./scripts/update_release_metadata.sh --vars-file molecule/shared/vars.yml
-#
-# Suggested next steps after generation:
-#   git diff -- meta/main.yml molecule/
-#   molecule test -s default
-
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-
 PYTHON_BIN="python3"
 SKIP_UPDATE_MATRIX="false"
 VARS_FILE="${REPO_ROOT}/molecule/shared/vars.yml"
@@ -31,11 +11,35 @@ OUTPUT_FILE="${REPO_ROOT}/meta/main.yml"
 VERBOSE="false"
 
 log() {
-  printf '%s\n' "$*"
+  printf '%s
+' "$*"
+}
+
+err() {
+  printf 'ERROR: %s
+' "$*" >&2
 }
 
 usage() {
-  sed -n '1,100p' "$0"
+  cat <<'EOF'
+Usage:
+  ./scripts/update_release_metadata.sh [options]
+
+Options:
+  --python <path>           Python interpreter to use (default: python3)
+  --skip-update-matrix      Do not refresh molecule/shared/vars.yml before rendering
+  --vars-file <path>        Shared vars file to use (default: molecule/shared/vars.yml)
+  --template <path>         Metadata template to use (default: templates/meta_main.yml.j2)
+  --output <path>           Output file to write (default: meta/main.yml)
+  --verbose                 Enable shell tracing
+  -h, --help                Show this help text
+
+Behavior:
+  1) Optionally refreshes molecule/shared/vars.yml via scripts/update_matrix.py
+  2) Syntax-checks generator scripts before executing them
+  3) Renders Molecule inventories from shared vars
+  4) Renders meta/main.yml from templates/meta_main.yml.j2
+EOF
 }
 
 while [[ $# -gt 0 ]]; do
@@ -69,7 +73,7 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     *)
-      printf 'ERROR: Unknown argument: %s\n' "$1" >&2
+      err "Unknown argument: $1"
       exit 2
       ;;
   esac
@@ -79,54 +83,65 @@ if [[ "$VERBOSE" == "true" ]]; then
   set -x
 fi
 
-if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
-  printf 'ERROR: Python interpreter not found: %s\n' "$PYTHON_BIN" >&2
+command -v "$PYTHON_BIN" >/dev/null 2>&1 || {
+  err "Python interpreter not found: $PYTHON_BIN"
   exit 3
-fi
+}
 
-UPDATE_MATRIX_SCRIPT="${SCRIPT_DIR}/update_matrix.py"
-RENDER_SCRIPT="${SCRIPT_DIR}/render_meta_main.py"
+UPDATE_MATRIX_SCRIPT="${REPO_ROOT}/scripts/update_matrix.py"
+RENDER_META_SCRIPT="${REPO_ROOT}/scripts/render_meta_main.py"
+RENDER_INVENTORY_SCRIPT="${REPO_ROOT}/scripts/render_inventory.py"
 
-if [[ ! -f "$RENDER_SCRIPT" ]]; then
-  printf 'ERROR: Renderer script not found: %s\n' "$RENDER_SCRIPT" >&2
+[[ -f "$RENDER_META_SCRIPT" ]] || {
+  err "Renderer script not found: $RENDER_META_SCRIPT"
   exit 4
-fi
+}
+
+[[ -f "$RENDER_INVENTORY_SCRIPT" ]] || {
+  err "Inventory renderer script not found: $RENDER_INVENTORY_SCRIPT"
+  exit 5
+}
+
+log '==> Syntax-checking generator scripts'
+"$PYTHON_BIN" -m py_compile "$RENDER_META_SCRIPT"
+"$PYTHON_BIN" -m py_compile "$RENDER_INVENTORY_SCRIPT"
 
 if [[ "$SKIP_UPDATE_MATRIX" != "true" ]]; then
-  if [[ ! -f "$UPDATE_MATRIX_SCRIPT" ]]; then
-    printf 'ERROR: Matrix update script not found: %s\n' "$UPDATE_MATRIX_SCRIPT" >&2
-    exit 5
-  fi
-  log "==> Refreshing Molecule matrix and inventories"
+  [[ -f "$UPDATE_MATRIX_SCRIPT" ]] || {
+    err "Matrix update script not found: $UPDATE_MATRIX_SCRIPT"
+    exit 6
+  }
+  "$PYTHON_BIN" -m py_compile "$UPDATE_MATRIX_SCRIPT"
+  log '==> Refreshing Molecule matrix'
   (cd "$REPO_ROOT" && "$PYTHON_BIN" "$UPDATE_MATRIX_SCRIPT")
 else
-  log "==> Skipping matrix refresh (requested)"
+  log '==> Skipping matrix refresh (requested)'
 fi
 
-if [[ ! -f "$VARS_FILE" ]]; then
-  printf 'ERROR: Shared vars file not found: %s\n' "$VARS_FILE" >&2
-  exit 6
-fi
-
-if [[ ! -f "$TEMPLATE_FILE" ]]; then
-  printf 'ERROR: Template file not found: %s\n' "$TEMPLATE_FILE" >&2
+[[ -f "$VARS_FILE" ]] || {
+  err "Shared vars file not found: $VARS_FILE"
   exit 7
-fi
+}
+
+[[ -f "$TEMPLATE_FILE" ]] || {
+  err "Template file not found: $TEMPLATE_FILE"
+  exit 8
+}
 
 mkdir -p "$(dirname -- "$OUTPUT_FILE")"
 
-log "==> Rendering meta/main.yml from shared matrix"
-(cd "$REPO_ROOT" && "$PYTHON_BIN" "$RENDER_SCRIPT" \
-  --vars-file "$VARS_FILE" \
-  --template "$TEMPLATE_FILE" \
-  --output "$OUTPUT_FILE")
+log '==> Rendering Molecule inventories from shared matrix'
+(cd "$REPO_ROOT" && "$PYTHON_BIN" "$RENDER_INVENTORY_SCRIPT")
 
-log "==> Done"
+log '==> Rendering meta/main.yml from shared matrix'
+(cd "$REPO_ROOT" && "$PYTHON_BIN" "$RENDER_META_SCRIPT"   --vars-file "$VARS_FILE"   --template "$TEMPLATE_FILE"   --output "$OUTPUT_FILE")
+
+log '==> Done'
 log "Shared vars : $VARS_FILE"
 log "Template    : $TEMPLATE_FILE"
 log "Output      : $OUTPUT_FILE"
-log ""
-log "Suggested next steps:"
-log "  1) git diff -- meta/main.yml molecule/"
-log "  2) molecule test -s default"
-log "  3) Commit if everything looks good"
+log ''
+log 'Suggested next steps:'
+log '  1) git diff -- meta/main.yml molecule/'
+log '  2) molecule test -s default'
+log '  3) Commit if everything looks good'

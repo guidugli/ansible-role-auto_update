@@ -1,47 +1,56 @@
 #!/usr/bin/env python3
 from pathlib import Path
+
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-VARS = ROOT / "molecule" / "shared" / "vars.yml"
+VARS_FILE = ROOT / 'molecule' / 'shared' / 'vars.yml'
+SCENARIOS = ('default', 'systemd')
 
-SCENARIOS = ["default", "systemd"]
 
-def host_block(name, image, version):
+def host_block(name: str, image: str, version: str) -> dict:
     return {
         name: {
-            "ansible_connection": "containers.podman.podman",
-            "container_image": f"{image}:{version}",
-            "container_command": "sleep 1d",
+            'ansible_connection': 'containers.podman.podman',
+            'container_image': f'{image}:{version}',
+            'container_command': 'sleep 1d',
         }
     }
 
-def main():
-    cfg = yaml.safe_load(VARS.read_text(encoding="utf-8"))
-    matrix = cfg["platform_matrix"]
-    images = cfg["images"]
 
-    hosts = {}
+def main() -> None:
+    data = yaml.safe_load(VARS_FILE.read_text(encoding='utf-8'))
+    matrix = data['platform_matrix']
+    images = data['images']
+
+    hosts: dict = {}
     for distro, versions in matrix.items():
-        for v in versions:
-            hn = f"{distro}{v.replace('.','')}"
-            hosts.update(host_block(hn, images[distro], v))
+        for version in versions:
+            hostname = f"{distro}{str(version).replace('.', '')}"
+            hosts.update(host_block(hostname, images[distro], str(version)))
 
     inventory = {
-        "all": {
-            "children": {
-                "molecule": {
-                    "hosts": hosts
+        'all': {
+            'children': {
+                'molecule': {
+                    'hosts': hosts,
                 }
             }
         }
     }
 
-    for sc in SCENARIOS:
-        out = ROOT / "molecule" / sc / "inventory" / "hosts.yml"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(yaml.safe_dump(inventory, sort_keys=False), encoding="utf-8")
-        print(f"Wrote {out}")
+    rendered = yaml.safe_dump(
+        inventory,
+        sort_keys=False,
+        explicit_start=True,
+    )
 
-if __name__ == "__main__":
+    for scenario in SCENARIOS:
+        output = ROOT / 'molecule' / scenario / 'inventory' / 'hosts.yml'
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(rendered, encoding='utf-8')
+        print(f'Wrote {output}')
+
+
+if __name__ == '__main__':
     main()

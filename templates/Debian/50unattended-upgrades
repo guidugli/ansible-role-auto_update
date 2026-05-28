@@ -99,7 +99,7 @@ Unattended-Upgrade::Package-Blacklist {
 // If empty or unset then no email is sent, make sure that you
 // have a working mail setup on your system. A package that provides
 // 'mailx' must be installed. E.g. "user@example.com"
-{% if au_email_to is defined %}
+{% if au_email_to | string | trim | length > 0 %}
 Unattended-Upgrade::Mail "{{ au_email_to }}";
 {% else %}
 //Unattended-Upgrade::Mail "";
