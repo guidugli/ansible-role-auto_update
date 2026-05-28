@@ -2,5 +2,7 @@
 - name: Test Playbook
   hosts: localhost
   remote_user: root
-  roles:
-    - guidugli.auto_update
+  tasks:
+    - name: Apply auto_update role from local repository
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/.."

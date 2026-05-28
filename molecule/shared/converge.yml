@@ -21,5 +21,8 @@
     au_reboot_time: '02:00'
     au_syslog_enable: false
     au_syslog_facility: daemon
-  roles:
-    - role: guidugli.auto_update
+  tasks:
+    - name: Apply auto_update role from local repository
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | default(playbook_dir ~ '/../..', true) }}"
+
