@@ -25,4 +25,3 @@
     - name: Apply auto_update role from local repository
       ansible.builtin.include_role:
         name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | default(playbook_dir ~ '/../..', true) }}"
-
