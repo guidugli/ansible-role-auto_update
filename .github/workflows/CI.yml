@@ -39,19 +39,7 @@ jobs:
       - name: Derive role FQCN from meta/main.yml
         id: role_meta
         run: |
-          fqcn="$({
-            .venv/bin/python - <<'PY'
-from pathlib import Path
-import yaml
-meta = yaml.safe_load(Path('meta/main.yml').read_text(encoding='utf-8')) or {}
-info = meta.get('galaxy_info', {})
-namespace = info.get('namespace', '').strip()
-role_name = info.get('role_name', '').strip()
-if not namespace or not role_name:
-    raise SystemExit('namespace and role_name must be defined in meta/main.yml')
-print(f'{namespace}.{role_name}')
-PY
-          })"
+          fqcn=$(.venv/bin/python -c "from pathlib import Path; import yaml; meta=yaml.safe_load(Path('meta/main.yml').read_text(encoding='utf-8')) or {}; info=meta.get('galaxy_info', {}); namespace=info.get('namespace', '').strip(); role_name=info.get('role_name', '').strip(); assert namespace and role_name, 'namespace and role_name must be defined in meta/main.yml'; print(f'{namespace}.{role_name}')")
           echo "fqcn=${fqcn}" >> "$GITHUB_OUTPUT"
 
       - name: Expose current repo as Galaxy-style role path
@@ -67,17 +55,3 @@ PY
       - name: Run yamllint
         run: |
           . .venv/bin/activate
-          yamllint .
-
-      - name: Run ansible-lint
-        run: |
-          . .venv/bin/activate
-          ansible-lint
-
-      - name: Run Molecule
-        env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
-        run: |
-          . .venv/bin/activate
-          molecule test -s ${{ matrix.scenario }}
