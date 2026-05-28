@@ -3,6 +3,8 @@ name: CI
 
 'on':
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -32,6 +34,16 @@ jobs:
         run: |
           . .venv/bin/activate
           python3 scripts/update_matrix.py
+
+      - name: Run yamllint
+        run: |
+          . .venv/bin/activate
+          yamllint .
+
+      - name: Run ansible-lint
+        run: |
+          . .venv/bin/activate
+          ansible-lint
 
       - name: Run Molecule
         run: |
