@@ -1,6 +1,5 @@
 ---
-# ansible-lint configuration aligned with the repository yamllint standards.
-# Goal: keep CI noise low while still enforcing useful Ansible quality checks.
+# ansible-lint configuration aligned with repository linting standards.
 
 profile: production
 
@@ -12,6 +11,7 @@ exclude_paths:
   - .travis.yml
   - molecule/default/inventory/
   - molecule/systemd/inventory/
+  - molecule/shared/vars.yml
 
 skip_list:
   - package-latest
@@ -20,17 +20,6 @@ skip_list:
 warn_list:
   - experimental
   - fqcn[deep]
-
-kinds:
-  - yaml: >-
-      .github/**/*.{yml,yaml}
-      molecule/**/*.{yml,yaml}
-      meta/**/*.{yml,yaml}
-      tasks/**/*.{yml,yaml}
-      handlers/**/*.{yml,yaml}
-      defaults/**/*.{yml,yaml}
-      vars/**/*.{yml,yaml}
-      templates/**/*.{yml,yaml}
 
 verbosity: 1
 

@@ -1,7 +1,7 @@
 ---
 # Generated file. Do not edit directly.
-# Source template: /home/carlospg/ansible-venv/ansible-role-auto_update/templates/meta_main.yml.j2
-# Generated on: 2026-05-28T01:55:45Z
+# Source template: templates/meta_main.yml.j2
+# Generated on: 2026-05-28T02:57:41Z
 
 dependencies: []
 
@@ -17,8 +17,7 @@ galaxy_info:
   platforms:
     - name: Fedora
       versions:
-        - "44"
-        - "43"
+        - "all"
     - name: Ubuntu
       versions:
         - "resolute"
