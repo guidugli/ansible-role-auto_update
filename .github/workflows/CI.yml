@@ -6,6 +6,9 @@ name: CI
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * 0'
 
 jobs:
   molecule:
@@ -13,10 +16,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [default, systemd]
+        scenario:
+          - default
+          - systemd
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the codebase
+        uses: actions/checkout@v4
 
       - name: Install system deps (podman + python)
         run: |
@@ -29,6 +35,29 @@ jobs:
           .venv/bin/python -m pip install --upgrade pip
           .venv/bin/python -m pip install -r requirements-dev.txt
           .venv/bin/python -m ansible.cli.galaxy collection install -r requirements.yml
+
+      - name: Derive role FQCN from meta/main.yml
+        id: role_meta
+        run: |
+          fqcn="$({
+            .venv/bin/python - <<'PY'
+from pathlib import Path
+import yaml
+meta = yaml.safe_load(Path('meta/main.yml').read_text(encoding='utf-8')) or {}
+info = meta.get('galaxy_info', {})
+namespace = info.get('namespace', '').strip()
+role_name = info.get('role_name', '').strip()
+if not namespace or not role_name:
+    raise SystemExit('namespace and role_name must be defined in meta/main.yml')
+print(f'{namespace}.{role_name}')
+PY
+          })"
+          echo "fqcn=${fqcn}" >> "$GITHUB_OUTPUT"
+
+      - name: Expose current repo as Galaxy-style role path
+        run: |
+          mkdir -p .ansible/roles
+          ln -sfn "$PWD" ".ansible/roles/${{ steps.role_meta.outputs.fqcn }}"
 
       - name: Update matrix + inventories
         run: |
@@ -46,6 +75,9 @@ jobs:
           ansible-lint
 
       - name: Run Molecule
+        env:
+          PY_COLORS: '1'
+          ANSIBLE_FORCE_COLOR: '1'
         run: |
           . .venv/bin/activate
           molecule test -s ${{ matrix.scenario }}
