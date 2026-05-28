@@ -19,13 +19,16 @@ rules:
   new-line-at-end-of-file: disable
   new-lines:
     type: unix
+  document-start:
+    present: true
   truthy:
-    allowed-values:
-      - 'true'
-      - 'false'
-      - 'yes'
-      - 'no'
+    allowed-values: ['true', 'false', 'yes', 'no']
+    check-keys: false
 
 ignore: |
   .github/stale.yml
   .travis.yml
+  .git/
+  .molecule/
+  .venv/
+  molecule/*/inventory/
