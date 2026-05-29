@@ -16,8 +16,7 @@ galaxy_info:
   platforms:
     - name: Fedora
       versions:
-        - "44"
-        - "43"
+        - "all"
     - name: Ubuntu
       versions:
         - "resolute"

@@ -37,7 +37,7 @@ PLATFORM_ORDER = ('fedora', 'ubuntu', 'debian')
 
 # Set to True only if Galaxy / ansible-lint metadata validation lags behind
 # newer Fedora releases and rejects valid Fedora version strings.
-RENDER_FEDORA_AS_ALL = False
+RENDER_FEDORA_AS_ALL = True
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
