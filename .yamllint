@@ -40,3 +40,4 @@ ignore: |
   .molecule/
   .venv/
   molecule/*/inventory/
+  .ansible/
