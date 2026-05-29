@@ -136,7 +136,6 @@ def render(template_path: Path, output_path: Path, vars_path: Path) -> None:
     template = env.get_template(template_path.name)
     rendered = template.render(
         template_name=template_path.name,
-        generated_on=datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         platforms=platforms,
     )
 
