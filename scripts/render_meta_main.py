@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
-"""
-Render meta/main.yml from templates/meta_main.yml.j2 using molecule/shared/vars.yml.
-
-Supported input schema:
-platform_matrix:
-  ubuntu: ["26.04", "24.04"]
-  debian: ["13", "12"]
-  fedora: ["44", "43"]
-
-Behavior:
-- Ubuntu numeric releases are converted to codenames for Galaxy metadata.
-- Debian numeric releases are converted to codenames for Galaxy metadata.
-- Fedora is rendered as "all" in metadata to remain compatible with
-  ansible-lint's current meta schema when newer Fedora releases are not yet listed.
-"""
+"""Render meta/main.yml from templates/meta_main.yml.j2."""
 
 from __future__ import annotations
 
@@ -25,38 +11,44 @@ from typing import Any
 import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+ROOT = Path(__file__).resolve().parents[1]
+
 UBUNTU_CODENAME_MAP = {
-    "20.04": "focal",
-    "22.04": "jammy",
-    "24.04": "noble",
-    "26.04": "resolute",
+    '20.04': 'focal',
+    '22.04': 'jammy',
+    '24.04': 'noble',
+    '26.04': 'resolute',
 }
 
 DEBIAN_CODENAME_MAP = {
-    "11": "bullseye",
-    "12": "bookworm",
-    "13": "trixie",
-    "14": "forky",
+    '11': 'bullseye',
+    '12': 'bookworm',
+    '13': 'trixie',
+    '14': 'forky',
 }
 
 PLATFORM_NAME_MAP = {
-    "fedora": "Fedora",
-    "ubuntu": "Ubuntu",
-    "debian": "Debian",
+    'fedora': 'Fedora',
+    'ubuntu': 'Ubuntu',
+    'debian': 'Debian',
 }
 
-PLATFORM_ORDER = ("fedora", "ubuntu", "debian")
+PLATFORM_ORDER = ('fedora', 'ubuntu', 'debian')
+
+# Set to True only if Galaxy / ansible-lint metadata validation lags behind
+# newer Fedora releases and rejects valid Fedora version strings.
+RENDER_FEDORA_AS_ALL = False
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data = yaml.safe_load(path.read_text(encoding='utf-8'))
     if not isinstance(data, dict):
-        raise ValueError(f"Expected a mapping in {path}")
+        raise ValueError(f'Expected top-level mapping in {path}')
     return data
 
 
-def extract_matrix(data: dict[str, Any]) -> dict[str, list[Any]]:
-    matrix = data.get("platform_matrix", data)
+def extract_matrix(data: dict[str, Any]) -> dict[str, Any]:
+    matrix = data.get('platform_matrix', data)
     if not isinstance(matrix, dict):
         raise ValueError("Expected 'platform_matrix' to be a mapping")
     return matrix
@@ -65,32 +57,30 @@ def extract_matrix(data: dict[str, Any]) -> dict[str, list[Any]]:
 def normalize_versions(platform_key: str, versions: list[Any]) -> list[str]:
     normalized: list[str] = []
 
-    if platform_key == "fedora":
-        # ansible-lint's meta schema can lag Fedora releases.
-        # Preserve the test matrix elsewhere, but render Galaxy metadata as "all".
-        return ["all"]
+    if platform_key == 'fedora' and RENDER_FEDORA_AS_ALL:
+        return ['all']
 
     for raw in versions:
         value = str(raw).strip().strip('"').strip("'")
         if not value:
             continue
 
-        if platform_key == "ubuntu":
+        if platform_key == 'ubuntu':
             if value in UBUNTU_CODENAME_MAP:
                 normalized.append(UBUNTU_CODENAME_MAP[value])
-            elif value.replace(".", "").isdigit():
+            elif value.replace('.', '').isdigit():
                 raise ValueError(
-                    f"Unsupported Ubuntu release in metadata renderer: {value}"
+                    f'Unsupported Ubuntu release in metadata renderer: {value}'
                 )
             else:
                 normalized.append(value.lower())
 
-        elif platform_key == "debian":
+        elif platform_key == 'debian':
             if value in DEBIAN_CODENAME_MAP:
                 normalized.append(DEBIAN_CODENAME_MAP[value])
             elif value.isdigit():
                 raise ValueError(
-                    f"Unsupported Debian release in metadata renderer: {value}"
+                    f'Unsupported Debian release in metadata renderer: {value}'
                 )
             else:
                 normalized.append(value.lower())
@@ -114,26 +104,26 @@ def matrix_to_platforms(matrix: dict[str, Any]) -> list[dict[str, Any]]:
                 f"Expected list of versions for '{key}', got {type(versions).__name__}"
             )
 
-        items = normalize_versions(key, versions)
-        if not items:
+        rendered_versions = normalize_versions(key, versions)
+        if not rendered_versions:
             continue
 
         platforms.append(
             {
-                "name": PLATFORM_NAME_MAP[key],
-                "versions": items,
+                'name': PLATFORM_NAME_MAP[key],
+                'versions': rendered_versions,
             }
         )
 
     if not platforms:
-        raise ValueError("No supported platforms found in matrix input")
+        raise ValueError('No supported platforms found in matrix input')
 
     return platforms
 
 
 def render(template_path: Path, output_path: Path, vars_path: Path) -> None:
-    raw = load_yaml(vars_path)
-    matrix = extract_matrix(raw)
+    vars_data = load_yaml(vars_path)
+    matrix = extract_matrix(vars_data)
     platforms = matrix_to_platforms(matrix)
 
     env = Environment(
@@ -145,37 +135,41 @@ def render(template_path: Path, output_path: Path, vars_path: Path) -> None:
 
     template = env.get_template(template_path.name)
     rendered = template.render(
-        template_name=str(template_path),
-        generated_on=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        template_name=template_path.name,
+        generated_on=datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         platforms=platforms,
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(rendered.rstrip() + "\n", encoding="utf-8")
+    output_path.write_text(rendered.rstrip() + '\n', encoding='utf-8')
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Render meta/main.yml from molecule/shared/vars.yml"
+        description='Render meta/main.yml from molecule/shared/vars.yml'
     )
     parser.add_argument(
-        "--vars-file",
-        default="molecule/shared/vars.yml",
-        help="Path to shared vars file (default: molecule/shared/vars.yml)",
+        '--vars-file',
+        default='molecule/shared/vars.yml',
+        help='Path to shared vars file (default: molecule/shared/vars.yml)',
     )
     parser.add_argument(
-        "--template",
-        default="templates/meta_main.yml.j2",
-        help="Path to metadata template (default: templates/meta_main.yml.j2)",
+        '--template',
+        default='templates/meta_main.yml.j2',
+        help='Path to metadata template (default: templates/meta_main.yml.j2)',
     )
     parser.add_argument(
-        "--output",
-        default="meta/main.yml",
-        help="Output path (default: meta/main.yml)",
+        '--output',
+        default='meta/main.yml',
+        help='Output path (default: meta/main.yml)',
     )
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> None:
     args = parse_args()
-    render(Path(args.template), Path(args.output), Path(args.vars_file))
+    render(ROOT / args.template, ROOT / args.output, ROOT / args.vars_file)
+
+
+if __name__ == '__main__':
+    main()
