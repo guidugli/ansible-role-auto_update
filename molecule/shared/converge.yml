@@ -22,4 +22,4 @@
     au_syslog_enable: false
     au_syslog_facility: daemon
   roles:
-    - role: guidugli.auto_update
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"

@@ -3,4 +3,4 @@
   hosts: localhost
   remote_user: root
   roles:
-    - role: guidugli.auto_update
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
